@@ -1,4 +1,4 @@
-# cio-dify-automation
+# schedule-coordination-tool
 
 ## Create a Virtual Environment
 
