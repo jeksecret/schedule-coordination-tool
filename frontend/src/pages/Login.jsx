@@ -4,7 +4,7 @@ export default function Login() {
   const { signInWithGoogle } = useAuth();
 
   return (
-    <div className="min-h-screen bg-gray-100 grid place-items-center px-4">
+    <div className="min-h-screen bg-gray-200 grid place-items-center px-4">
       <div className="w-full max-w-md bg-white rounded-lg border shadow-sm p-6">
         <h1 className="text-lg font-semibold mb-4">社内ログイン</h1>
         <p className="text-sm text-gray-500 mb-6">Googleアカウントでログインしてください。</p>

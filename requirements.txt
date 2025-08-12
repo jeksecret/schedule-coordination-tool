@@ -3,3 +3,4 @@ uvicorn
 gunicorn
 supabase
 python-dotenv
+notion-client

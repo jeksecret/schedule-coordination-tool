@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
@@ -19,11 +19,11 @@ const STATUS_OPTIONS = [
   { value: "確定", label: "確定" },
 ];
 
-function formatDate(d) {
-  if (!d) return "-";
-  // Supabase returns 'YYYY-MM-DD' → display 'YYYY/MM/DD'
-  return String(d).replaceAll("-", "/");
-}
+// function formatDate(d) {
+//   if (!d) return "-";
+//   // Supabase returns 'YYYY-MM-DD' → display 'YYYY/MM/DD'
+//   return String(d).replaceAll("-", "/");
+// }
 
 export default function Dashboard() {
   const nav = useNavigate();
@@ -99,7 +99,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-200">
       {/* Top Navigation */}
       <nav className="bg-blue-500 text-white shadow">
         <div className="max-w-full mx-auto px-4 py-3 flex justify-end items-center">
@@ -113,18 +113,19 @@ export default function Dashboard() {
       </nav>
 
       {/* Page header */}
-      <header className="border-b bg-white shadow-sm">
+      <header>
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="text-sm text-blue-900 font-medium">日程調整一覧</div>
+          <div className="text-lg font-semibold text-gray-800">日程調整一覧</div>
           <button
             onClick={() => nav("/session/create")}
-            className="px-3 py-1.5 rounded border border-blue-500 text-blue-600 hover:bg-blue-50 text-sm"
+            className="px-3 py-2.5 rounded bg-blue-600 text-white text-sm hover:bg-blue-700"
           >
             新規作成
           </button>
         </div>
       </header>
 
+      {/* Main content */}
       <main className="max-w-7xl mx-auto px-4 py-6">
         {/* Filters */}
         <div className="rounded-md bg-white shadow-sm border border-gray-200 p-4">
@@ -134,7 +135,7 @@ export default function Dashboard() {
               <select
                 value={purpose}
                 onChange={(e) => setPurpose(e.target.value)}
-                className="w-full rounded border-gray-300 text-sm focus:ring-blue-500 focus:border-blue-500"
+                className="w-full rounded border border-gray-300 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
               >
                 {PURPOSE_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>
@@ -149,7 +150,7 @@ export default function Dashboard() {
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="w-full rounded border-gray-300 text-sm focus:ring-blue-500 focus:border-blue-500"
+                className="w-full rounded border border-gray-300 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
               >
                 {STATUS_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>
@@ -166,8 +167,8 @@ export default function Dashboard() {
               <input
                 value={facilityQuery}
                 onChange={(e) => setFacilityQuery(e.target.value)}
-                placeholder="事業所..."
-                className="w-full rounded border-gray-300 text-sm focus:ring-blue-500 focus:border-blue-500"
+                placeholder="事業所名..."
+                className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
 
