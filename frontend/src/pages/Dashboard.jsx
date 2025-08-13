@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-// Fallbacks (used until /meta/enums loads or if it fails)
 const DEFAULT_PURPOSE = ["訪問調査", "聞き取り", "場面観察", "FB", "その他"];
 const DEFAULT_STATUS  = ["起案中", "評価者待ち", "事業所待ち", "確定"];
+const PAGE_SIZE = 10;
 
 const toOptions = (arr) => [{ value: "", label: "すべて" }, ...arr.map(v => ({ value: v, label: v }))];
 
@@ -12,7 +12,7 @@ export default function Dashboard() {
   const nav = useNavigate();
   const { signOut } = useAuth();
 
-  // Filter options loaded from backend (with fallback defaults)
+  // Filter options
   const [purposeOptions, setPurposeOptions] = useState(toOptions(DEFAULT_PURPOSE));
   const [statusOptions,  setStatusOptions]  = useState(toOptions(DEFAULT_STATUS));
 
@@ -27,18 +27,25 @@ export default function Dashboard() {
   const [committedFacility, setCommittedFacility] = useState("");
 
   // data state
-  const [rows, setRows] = useState([]);
+  const [rows, setRows] = useState([]);     // current page items only
+  const [total, setTotal] = useState(0);    // total rows across all pages
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
 
-  // Load enum values from backend (once)
+  // pagination (server-side)
+  const [page, setPage] = useState(1);
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const startIndex = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const endIndex = total === 0 ? 0 : Math.min(page * PAGE_SIZE, total);
+
+  // load enums once
   useEffect(() => {
     let ignore = false;
     (async () => {
       try {
         const res = await fetch("/api/meta/enums", { credentials: "include" });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json(); // { purpose: [...], status: [...] }
+        const data = await res.json();
         if (ignore) return;
 
         const p = Array.isArray(data.purpose) && data.purpose.length ? data.purpose : DEFAULT_PURPOSE;
@@ -47,24 +54,23 @@ export default function Dashboard() {
         setPurposeOptions(toOptions(p));
         setStatusOptions(toOptions(s));
 
-        // Ensure current selections are valid (if options changed)
         if (purpose && !p.includes(purpose)) setPurpose("");
-        if (status  && !s.includes(status))  setStatus("");
-
+        if (status && !s.includes(status)) setStatus("");
       } catch {
-        // keep fallbacks silently
+        // fallback to defaults
       }
     })();
     return () => { ignore = true; };
-  }, []); // run once
+  }, []);
 
   const handleSearch = () => {
     setCommittedPurpose(purpose);
     setCommittedStatus(status);
     setCommittedFacility(facilityQuery);
+    setPage(1); // reset to first page on new search
   };
 
-  // Fetch table data when committed filters change
+  // fetch data when committed filters or page change
   useEffect(() => {
     const controller = new AbortController();
     const signal = controller.signal;
@@ -73,6 +79,8 @@ export default function Dashboard() {
     if (committedPurpose) qs.set("purpose", committedPurpose);
     if (committedStatus) qs.set("status", committedStatus);
     if (committedFacility) qs.set("facility", committedFacility);
+    qs.set("page", String(page));
+    qs.set("page_size", String(PAGE_SIZE));
 
     (async () => {
       setLoading(true);
@@ -83,19 +91,22 @@ export default function Dashboard() {
           signal,
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
+        const out = await res.json(); // { items, total, page, page_size }
         if (signal.aborted) return;
 
-        const mapped = data.map((r) => ({
+        const mapped = out.items.map((r) => ({
           id: r.id,
           facilityName: r.facility_name,
           purpose: r.purpose,
           status: r.status,
           confirmedDate: String(r.confirmed_date ?? "-").replaceAll("-", "/"),
           notionUrl: r.notion_url,
-          progress: { done: 0, total: 0 }, // placeholder until progress is implemented
+          progress: { done: 0, total: 0 }, // placeholder
         }));
+
         setRows(mapped);
+        setTotal(out.total ?? mapped.length);
+        // trust our 'page', but you could also use out.page if returned
       } catch (e) {
         if (e?.name === "AbortError") return;
         setErr(String(e?.message || e));
@@ -105,7 +116,7 @@ export default function Dashboard() {
     })();
 
     return () => controller.abort();
-  }, [committedPurpose, committedStatus, committedFacility]);
+  }, [committedPurpose, committedStatus, committedFacility, page]);
 
   const handleLogout = async () => {
     await signOut();
@@ -234,49 +245,82 @@ export default function Dashboard() {
                     </td>
                   </tr>
                 )}
-                {!loading &&
-                  !err &&
-                  rows.map((r) => (
-                    <tr
-                      key={r.id}
-                      className="[&>td]:px-3 [&>td]:py-2 hover:bg-blue-50/40"
-                    >
-                      <td className="text-gray-600">{r.id}</td>
-                      <td>
-                        {r.notionUrl ? (
-                          <a
-                            href={r.notionUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-blue-700 hover:underline"
-                          >
-                            {r.facilityName}
-                          </a>
-                        ) : (
-                          <span className="text-blue-700">{r.facilityName}</span>
-                        )}
-                      </td>
-                      <td>{r.purpose}</td>
-                      <td>
-                        <StatusBadge status={r.status} />
-                      </td>
-                      <td className="tabular-nums">
-                        {r.progress.done} / {r.progress.total}
-                      </td>
-                      <td className="tabular-nums">{r.confirmedDate}</td>
-                      <td>
-                        <button
-                          onClick={() => nav(`/session/${r.id}/status`)}
-                          className="px-2 py-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700"
+                {!loading && !err && rows.map((r) => (
+                  <tr key={r.id} className="[&>td]:px-3 [&>td]:py-2 hover:bg-blue-50/40">
+                    <td className="text-gray-600">{r.id}</td>
+                    <td>
+                      {r.notionUrl ? (
+                        <a
+                          href={r.notionUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-blue-700 hover:underline"
                         >
-                          詳細
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                          {r.facilityName}
+                        </a>
+                      ) : (
+                        <span className="text-blue-700">{r.facilityName}</span>
+                      )}
+                    </td>
+                    <td>{r.purpose}</td>
+                    <td><StatusBadge status={r.status} /></td>
+                    <td className="tabular-nums">{r.progress.done} / {r.progress.total}</td>
+                    <td className="tabular-nums">{r.confirmedDate}</td>
+                    <td>
+                      <button
+                        onClick={() => nav(`/session/${r.id}/status`)}
+                        className="px-2 py-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700"
+                      >
+                        詳細
+                      </button>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {!loading && !err && total > 0 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t">
+              <div className="text-xs text-gray-600">
+                {`${startIndex}–${endIndex} / ${total}`}
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setPage(1)}
+                  disabled={page === 1}
+                  className="px-2 py-1 text-xs border rounded disabled:opacity-50"
+                >
+                  « First
+                </button>
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-2 py-1 text-xs border rounded disabled:opacity-50"
+                >
+                  ‹ Prev
+                </button>
+                <span className="px-2 text-xs text-gray-700">
+                  Page {page} / {pageCount}
+                </span>
+                <button
+                  onClick={() => setPage(p => Math.min(pageCount, p + 1))}
+                  disabled={page === pageCount}
+                  className="px-2 py-1 text-xs border rounded disabled:opacity-50"
+                >
+                  Next ›
+                </button>
+                <button
+                  onClick={() => setPage(pageCount)}
+                  disabled={page === pageCount}
+                  className="px-2 py-1 text-xs border rounded disabled:opacity-50"
+                >
+                  Last »
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </main>
     </div>
