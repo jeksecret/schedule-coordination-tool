@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, Query
-from app.services.db import get_supabase  # your Supabase client factory
+from app.services.db import get_supabase
 
 router = APIRouter()
 

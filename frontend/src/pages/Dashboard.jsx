@@ -2,32 +2,19 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-const PURPOSE_OPTIONS = [
-  { value: "", label: "すべて" },
-  { value: "訪問調査", label: "訪問調査" },
-  { value: "聞き取り", label: "聞き取り" },
-  { value: "場面観察", label: "場面観察" },
-  { value: "FB", label: "FB" },
-  { value: "その他", label: "その他" },
-];
+// Fallbacks (used until /meta/enums loads or if it fails)
+const DEFAULT_PURPOSE = ["訪問調査", "聞き取り", "場面観察", "FB", "その他"];
+const DEFAULT_STATUS  = ["起案中", "評価者待ち", "事業所待ち", "確定"];
 
-const STATUS_OPTIONS = [
-  { value: "", label: "すべて" },
-  { value: "起案中", label: "起案中" },
-  { value: "評価者待ち", label: "評価者待ち" },
-  { value: "事業所待ち", label: "事業所待ち" },
-  { value: "確定", label: "確定" },
-];
-
-// function formatDate(d) {
-//   if (!d) return "-";
-//   // Supabase returns 'YYYY-MM-DD' → display 'YYYY/MM/DD'
-//   return String(d).replaceAll("-", "/");
-// }
+const toOptions = (arr) => [{ value: "", label: "すべて" }, ...arr.map(v => ({ value: v, label: v }))];
 
 export default function Dashboard() {
   const nav = useNavigate();
   const { signOut } = useAuth();
+
+  // Filter options loaded from backend (with fallback defaults)
+  const [purposeOptions, setPurposeOptions] = useState(toOptions(DEFAULT_PURPOSE));
+  const [statusOptions,  setStatusOptions]  = useState(toOptions(DEFAULT_STATUS));
 
   // UI (uncommitted) filters
   const [purpose, setPurpose] = useState("");
@@ -44,12 +31,40 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
 
+  // Load enum values from backend (once)
+  useEffect(() => {
+    let ignore = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/meta/enums", { credentials: "include" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json(); // { purpose: [...], status: [...] }
+        if (ignore) return;
+
+        const p = Array.isArray(data.purpose) && data.purpose.length ? data.purpose : DEFAULT_PURPOSE;
+        const s = Array.isArray(data.status)  && data.status.length  ? data.status  : DEFAULT_STATUS;
+
+        setPurposeOptions(toOptions(p));
+        setStatusOptions(toOptions(s));
+
+        // Ensure current selections are valid (if options changed)
+        if (purpose && !p.includes(purpose)) setPurpose("");
+        if (status  && !s.includes(status))  setStatus("");
+
+      } catch {
+        // keep fallbacks silently
+      }
+    })();
+    return () => { ignore = true; };
+  }, []); // run once
+
   const handleSearch = () => {
     setCommittedPurpose(purpose);
     setCommittedStatus(status);
     setCommittedFacility(facilityQuery);
   };
 
+  // Fetch table data when committed filters change
   useEffect(() => {
     const controller = new AbortController();
     const signal = controller.signal;
@@ -69,8 +84,7 @@ export default function Dashboard() {
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-
-        if (signal.aborted) return; // ignore if got aborted after resolve
+        if (signal.aborted) return;
 
         const mapped = data.map((r) => ({
           id: r.id,
@@ -79,11 +93,11 @@ export default function Dashboard() {
           status: r.status,
           confirmedDate: String(r.confirmed_date ?? "-").replaceAll("-", "/"),
           notionUrl: r.notion_url,
-          progress: { done: 0, total: 0 },
+          progress: { done: 0, total: 0 }, // placeholder until progress is implemented
         }));
         setRows(mapped);
       } catch (e) {
-        if (e && e.name === "AbortError") return; // don't show aborts as errors
+        if (e?.name === "AbortError") return;
         setErr(String(e?.message || e));
       } finally {
         if (!signal.aborted) setLoading(false);
@@ -137,8 +151,8 @@ export default function Dashboard() {
                 onChange={(e) => setPurpose(e.target.value)}
                 className="w-full rounded border border-gray-300 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
               >
-                {PURPOSE_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
+                {purposeOptions.map((o) => (
+                  <option key={o.value + o.label} value={o.value}>
                     {o.label}
                   </option>
                 ))}
@@ -152,8 +166,8 @@ export default function Dashboard() {
                 onChange={(e) => setStatus(e.target.value)}
                 className="w-full rounded border border-gray-300 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
               >
-                {STATUS_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
+                {statusOptions.map((o) => (
+                  <option key={o.value + o.label} value={o.value}>
                     {o.label}
                   </option>
                 ))}
