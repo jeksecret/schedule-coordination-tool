@@ -136,7 +136,7 @@ export default function Dashboard() {
         <div className="max-w-full mx-auto px-4 py-3 flex justify-end items-center">
           <button
             onClick={handleLogout}
-            className="border border-white bg-transparent text-white font-light px-4 py-1 rounded hover:bg-white hover:text-blue-600 transition"
+            className="border border-white bg-transparent text-white font-light px-4 py-1 rounded hover:bg-white hover:text-blue-600"
           >
             ログアウト
           </button>
@@ -198,7 +198,6 @@ export default function Dashboard() {
               <input
                 value={facilityQuery}
                 onChange={(e) => setFacilityQuery(e.target.value)}
-                placeholder="事業所名..."
                 className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
               />
             </div>

@@ -71,7 +71,7 @@ export default function SessionCreate() {
         <div className="max-w-full mx-auto px-4 py-3 flex justify-end items-center">
           <button
             onClick={handleLogout}
-            className="border border-white bg-transparent text-white font-light px-4 py-1 rounded hover:bg-white hover:text-blue-600 transition"
+            className="border border-white bg-transparent text-white font-light px-4 py-1 rounded hover:bg-white hover:text-blue-600"
           >
             ログアウト
           </button>
@@ -151,8 +151,11 @@ export default function SessionCreate() {
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <div className="w-36 text-xs text-gray-600">調査目的</div>
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="w-36 text-xs text-gray-600">調査目的</div>
               <select
-                className="w-48 rounded border-gray-300 py-1 text-sm"
+                className="w-36 rounded border-gray-300 py-1 text-sm"
                 value={purpose}
                 onChange={(e) => setPurpose(e.target.value)}
               >
@@ -164,9 +167,11 @@ export default function SessionCreate() {
 
             <div className="flex items-center gap-3">
               <div className="w-36 text-xs text-gray-600">評価者回答期限</div>
+            <div className="flex items-center gap-3">
+              <div className="w-36 text-xs text-gray-600">評価者回答期限</div>
               <input
                 type="date"
-                className="w-48 rounded border-gray-300 py-1 text-sm"
+                className="w-36 rounded border-gray-300 py-1 text-sm"
                 value={responseDeadline}
                 onChange={(e) => setResponseDeadline(e.target.value)}
               />
@@ -174,9 +179,11 @@ export default function SessionCreate() {
 
             <div className="flex items-center gap-3">
               <div className="w-36 text-xs text-gray-600">事業所提示期限</div>
+            <div className="flex items-center gap-3">
+              <div className="w-36 text-xs text-gray-600">事業所提示期限</div>
               <input
                 type="date"
-                className="w-48 rounded border-gray-300 py-1 text-sm"
+                className="w-36 rounded border-gray-300 py-1 text-sm"
                 value={presentationDate}
                 onChange={(e) => setPresentationDate(e.target.value)}
               />
@@ -192,7 +199,7 @@ export default function SessionCreate() {
                   <div key={i} className="flex items-center gap-2">
                     <input
                       type="date"
-                      className="w-48 rounded border-gray-300 text-sm"
+                      className="w-36 rounded border-gray-300 text-sm"
                       value={d}
                       onChange={(e) => setDate(i, e.target.value)}
                     />
@@ -200,7 +207,7 @@ export default function SessionCreate() {
                       <button
                         type="button"
                         onClick={() => removeDate(i)}
-                        className="px-2 py-1 rounded border text-xs hover:bg-red-500 hover:text-white transition flex items-center gap-1"
+                        className="px-1 py-1 rounded border text-xs bg-red-500 hover:bg-red-700 text-white flex items-center gap-1"
                       >
                         <TrashIcon className="w-4 h-4" /> 削除
                       </button>
@@ -210,7 +217,7 @@ export default function SessionCreate() {
                 <button
                   type="button"
                   onClick={addDateRow}
-                  className="mt-1 px-2 py-1 rounded border text-sm hover:bg-blue-500 hover:text-white transition flex items-center gap-1"
+                  className="mt-1 px-1 py-1 rounded border text-sm bg-blue-500 hover:bg-blue-700 text-white flex items-center gap-1"
                 >
                   <PlusIcon className="w-4 h-4" /> 追加
                 </button>
