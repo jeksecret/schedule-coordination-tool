@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
 
 const PURPOSE_OPTIONS = ["訪問調査", "聞き取り", "場面観察", "FB", "その他"];
 
@@ -16,7 +17,7 @@ export default function SessionCreate() {
   const [purpose, setPurpose] = useState("訪問調査");
   const [responseDeadline, setResponseDeadline] = useState("");
   const [presentationDate, setPresentationDate] = useState("");
-  const [dates, setDates] = useState([""]); // candidate dates
+  const [dates, setDates] = useState([""]);
 
   // ui state
   const [loadingFetch, setLoadingFetch] = useState(false);
@@ -29,9 +30,7 @@ export default function SessionCreate() {
     setErr("");
     setLoadingFetch(true);
     try {
-      const res = await fetch(
-        `/api/notion/facility-info?url=${encodeURIComponent(notionUrl)}`
-      );
+      const res = await fetch(`/api/notion/facility-info?url=${encodeURIComponent(notionUrl)}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
 
@@ -47,13 +46,22 @@ export default function SessionCreate() {
 
   // Add/remove candidate date rows
   const addDateRow = () => setDates((d) => [...d, ""]);
-  const setDate = (i, v) =>
-    setDates((d) => d.map((x, idx) => (idx === i ? v : x)));
+  const setDate = (i, v) => setDates((d) => d.map((x, idx) => (idx === i ? v : x)));
   const removeDate = (i) => setDates((d) => d.filter((_, idx) => idx !== i));
 
   const handleLogout = async () => {
     await signOut();
     nav("/login", { replace: true });
+  };
+
+  // (stub) create handler
+  const handleCreate = async () => {
+    setSaving(true);
+    try {
+      // TODO: POST to backend
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -72,13 +80,14 @@ export default function SessionCreate() {
 
       {/* Main content */}
       <main className="max-w-3xl mx-auto px-4 py-6">
-        <h1 className="text-lg font-semibold text-gray-800 mb-4">日程調整作成</h1>
+        <h1 className="text-base font-semibold text-gray-800 mb-3">日程調整作成</h1>
 
-        <div className="bg-white border rounded p-4 space-y-4">
+        <div className="bg-white border rounded-lg p-4 space-y-4 shadow-sm">
           {/* Notion URL + 情報取得 */}
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="text-sm text-gray-700">Notion URL</div>
             <input
-              className="flex-1 rounded border border-gray-300 px-3 py-2 text-sm"
+              className="flex-1 min-w-[200px] rounded border border-gray-300 px-3 py-2 text-sm"
               placeholder="https://www.notion.so/..."
               value={notionUrl}
               onChange={(e) => setNotionUrl(e.target.value)}
@@ -94,117 +103,129 @@ export default function SessionCreate() {
           </div>
 
           {/* 事業所情報（表示のみ） */}
-          <div className="text-sm space-y-1">
-            <div>
-              <span className="text-gray-600">事業所名：</span>
-              <span className="text-gray-800">{facilityName || "-"}</span>
-            </div>
-            <div>
-              <span className="text-gray-600">事業所担当者：</span>
-              {(contact?.name || contact?.email) ? (
-                <span className="text-gray-800">
-                  {contact.name || ""}
-                  {contact.email
-                    ? (contact.name ? `（${contact.email}）` : contact.email)
-                    : ""}
-                </span>
-              ) : (
-                <span className="text-gray-400">-</span>
-              )}
-            </div>
-            <div className="text-gray-600">評価者：</div>
-            <ul className="list-disc pl-6">
-              {evaluators.length ? (
-                evaluators.map((e, i) => (
-                  <li key={i} className="text-gray-800">
-                    {e.name}（{e.email}）
-                  </li>
-                ))
-              ) : (
-                <li className="text-gray-400">-</li>
-              )}
-            </ul>
+          <div className="border rounded">
+            <dl className="divide-y">
+              <div className="flex items-center px-3 py-2">
+                <dt className="w-36 text-xs text-gray-600">事業所名</dt>
+                <dd className="flex-1 text-sm">
+                  {facilityName ? (
+                    <span className="text-gray-900">{facilityName}</span>
+                  ) : (
+                    <span className="text-gray-400">-</span>
+                  )}
+                </dd>
+              </div>
+              <div className="flex items-center px-3 py-2">
+                <dt className="w-36 text-xs text-gray-600">事業所担当者</dt>
+                <dd className="flex-1 text-sm">
+                  {(contact?.name || contact?.email) ? (
+                    <span>
+                      {contact.name || ""}
+                      {contact.email ? (contact.name ? `（${contact.email}）` : contact.email) : ""}
+                    </span>
+                  ) : (
+                    <span className="text-gray-400">-</span>
+                  )}
+                </dd>
+              </div>
+              <div className="flex items-start px-3 py-2">
+                <dt className="w-36 text-xs text-gray-600 leading-7">評価者</dt>
+                <dd className="flex-1 text-sm">
+                  {evaluators?.length ? (
+                    <ul className="space-y-1">
+                      {evaluators.map((e, i) => (
+                        <li key={i} className="leading-6">
+                          {e.name}{e.email ? `（${e.email}）` : ""}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <span className="text-gray-400">-</span>
+                  )}
+                </dd>
+              </div>
+            </dl>
           </div>
 
           {/* 調整情報入力 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <label className="text-sm">
-              <div className="text-gray-600 mb-1">調査目的</div>
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="w-36 text-xs text-gray-600">調査目的</div>
               <select
-                className="w-full rounded border-gray-300 text-sm"
+                className="w-48 rounded border-gray-300 py-1 text-sm"
                 value={purpose}
                 onChange={(e) => setPurpose(e.target.value)}
               >
                 {PURPOSE_OPTIONS.map((p) => (
-                  <option key={p} value={p}>
-                    {p}
-                  </option>
+                  <option key={p} value={p}>{p}</option>
                 ))}
               </select>
-            </label>
+            </div>
 
-            <label className="text-sm">
-              <div className="text-gray-600 mb-1">評価者回答期限</div>
+            <div className="flex items-center gap-3">
+              <div className="w-36 text-xs text-gray-600">評価者回答期限</div>
               <input
                 type="date"
-                className="w-full rounded border-gray-300 text-sm"
+                className="w-48 rounded border-gray-300 py-1 text-sm"
                 value={responseDeadline}
                 onChange={(e) => setResponseDeadline(e.target.value)}
               />
-            </label>
+            </div>
 
-            <label className="text-sm">
-              <div className="text-gray-600 mb-1">事業所提示予定日</div>
+            <div className="flex items-center gap-3">
+              <div className="w-36 text-xs text-gray-600">事業所提示期限</div>
               <input
                 type="date"
-                className="w-full rounded border-gray-300 text-sm"
+                className="w-48 rounded border-gray-300 py-1 text-sm"
                 value={presentationDate}
                 onChange={(e) => setPresentationDate(e.target.value)}
               />
-            </label>
+            </div>
           </div>
 
           {/* 候補日程 */}
-          <div className="text-sm">
-            <div className="text-gray-600 mb-1">候補日程</div>
-            <div className="space-y-2">
-              {dates.map((d, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <input
-                    type="date"
-                    className="rounded border-gray-300 text-sm"
-                    value={d}
-                    onChange={(e) => setDate(i, e.target.value)}
-                  />
-                  {dates.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeDate(i)}
-                      className="px-2 py-1 rounded border text-xs"
-                    >
-                      削除
-                    </button>
-                  )}
-                </div>
-              ))}
+          <div className="border rounded">
+            <div className="flex items-start">
+              <div className="w-36 text-xs text-gray-600 px-3 py-2">候補日程</div>
+              <div className="flex-1 px-3 py-2 space-y-2">
+                {dates.map((d, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <input
+                      type="date"
+                      className="w-48 rounded border-gray-300 text-sm"
+                      value={d}
+                      onChange={(e) => setDate(i, e.target.value)}
+                    />
+                    {dates.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeDate(i)}
+                        className="px-2 py-1 rounded border text-xs hover:bg-red-500 hover:text-white transition flex items-center gap-1"
+                      >
+                        <TrashIcon className="w-4 h-4" /> 削除
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={addDateRow}
+                  className="mt-1 px-2 py-1 rounded border text-sm hover:bg-blue-500 hover:text-white transition flex items-center gap-1"
+                >
+                  <PlusIcon className="w-4 h-4" /> 追加
+                </button>
+              </div>
             </div>
-            <button
-              type="button"
-              onClick={addDateRow}
-              className="mt-2 px-3 py-1.5 rounded border text-sm"
-            >
-              ＋ 追加
-            </button>
           </div>
 
           {err && <div className="text-red-600 text-sm">{err}</div>}
 
-          <div className="pt-2">
+          <div className="pt-2 flex justify-center">
             <button
               type="button"
-            //   onClick={handleCreate}
+              onClick={handleCreate}
               disabled={saving || !facilityName || !contact.name || !contact.email}
-              className="w-full md:w-auto px-4 py-2 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 disabled:opacity-60"
+              className="w-full md:w-auto px-3 py-2 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 disabled:opacity-60"
             >
               {saving ? "保存中…" : "保存して文面作成"}
             </button>
