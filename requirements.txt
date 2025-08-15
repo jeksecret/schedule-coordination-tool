@@ -4,3 +4,5 @@ gunicorn
 supabase
 python-dotenv
 notion-client
+python-jose[cryptography]
+requests

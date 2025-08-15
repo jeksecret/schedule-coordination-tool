@@ -20,19 +20,38 @@ export function AuthProvider({ children }) {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  const getAccessToken = async () => {
+    let { data } = await supabase.auth.getSession();
+    let s = data?.session ?? null;
+
+    const now = Math.floor(Date.now() / 1000);
+    const exp = s?.expires_at ?? 0;
+
+    if (!s || (exp && exp - now <= 30)) {
+      const { data: ref } = await supabase.auth.refreshSession();
+      s = ref?.session ?? null;
+      setSession(s ?? null);
+    }
+    return s?.access_token ?? null;
+  };
+
+  const signInWithGoogle = async () => {
+    const redirectTo = `${window.location.origin}/auth/callback`;
+    await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo } });
+  };
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    window.location.replace("/login?e=signedout");
+  };
+
   const value = {
     session,
     user: session?.user ?? null,
-    signInWithGoogle: async () => {
-      const redirectTo = `${window.location.origin}/auth/callback`;
-      await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo },
-      });
-    },
-    signOut: async () => {
-      await supabase.auth.signOut();
-    },
+    loading,
+    getAccessToken,
+    signInWithGoogle,
+    signOut,
   };
 
   if (loading) {

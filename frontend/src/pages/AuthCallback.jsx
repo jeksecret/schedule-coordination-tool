@@ -6,15 +6,23 @@ export default function AuthCallback() {
   const nav = useNavigate();
 
   useEffect(() => {
-    // Supabase handles the code in URL; getSession will be set shortly
+    const hash = window.location.hash || "";
+    const hashParams = new URLSearchParams(hash.replace(/^#/, ""));
+    const oauthError = hashParams.get("error") || hashParams.get("error_description");
+    if (oauthError) {
+      nav("/login?e=domain", { replace: true });
+      return;
+    }
+
     const timer = setTimeout(async () => {
       const { data } = await supabase.auth.getSession();
       if (data.session) {
-        nav("/dashboard", { replace: true });
+        nav("/session/list", { replace: true });
       } else {
         nav("/login", { replace: true });
       }
     }, 300);
+
     return () => clearTimeout(timer);
   }, [nav]);
 
