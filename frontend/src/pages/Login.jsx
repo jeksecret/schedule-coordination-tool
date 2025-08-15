@@ -12,7 +12,7 @@ export default function Login() {
           onClick={signInWithGoogle}
           className="w-full flex items-center justify-center gap-3 border rounded px-4 py-2 hover:bg-gray-50"
         >
-          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="" className="w-5 h-5"/>
+          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google logo" className="w-5 h-5"/>
           <span>Googleでログイン</span>
         </button>
       </div>

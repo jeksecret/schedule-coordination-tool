@@ -7,16 +7,17 @@ import {
   ChevronRightIcon,
   ChevronDoubleRightIcon
 } from "@heroicons/react/24/solid";
+import { fetchEnums, fetchSessionList } from "../services/sessionService";
 
 const DEFAULT_PURPOSE = ["訪問調査", "聞き取り", "場面観察", "FB", "その他"];
-const DEFAULT_STATUS  = ["起案中", "評価者待ち", "事業所待ち", "確定"];
+const DEFAULT_STATUS = ["起案中", "評価者待ち", "事業所待ち", "確定"];
 const PAGE_SIZE = 10;
 
 const toOptions = (arr) => [{ value: "", label: "すべて" }, ...arr.map(v => ({ value: v, label: v }))];
 
-export default function Dashboard() {
-  const nav = useNavigate();
+export default function SessionList() {
   const { signOut } = useAuth();
+  const nav = useNavigate();
 
   // Filter options
   const [purposeOptions, setPurposeOptions] = useState(toOptions(DEFAULT_PURPOSE));
@@ -33,12 +34,12 @@ export default function Dashboard() {
   const [committedFacility, setCommittedFacility] = useState("");
 
   // data state
-  const [rows, setRows] = useState([]);     // current page items only
-  const [total, setTotal] = useState(0);    // total rows across all pages
+  const [rows, setRows] = useState([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
 
-  // pagination (server-side)
+  // pagination
   const [page, setPage] = useState(1);
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const startIndex = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
@@ -46,81 +47,70 @@ export default function Dashboard() {
 
   // load enums once
   useEffect(() => {
-    let ignore = false;
+    const controller = new AbortController();
     (async () => {
       try {
-        const res = await fetch("/api/meta/enums", { credentials: "include" });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        if (ignore) return;
-
+        const data = await fetchEnums(controller.signal);
         const p = Array.isArray(data.purpose) && data.purpose.length ? data.purpose : DEFAULT_PURPOSE;
         const s = Array.isArray(data.status)  && data.status.length  ? data.status  : DEFAULT_STATUS;
-
         setPurposeOptions(toOptions(p));
         setStatusOptions(toOptions(s));
-
         if (purpose && !p.includes(purpose)) setPurpose("");
         if (status && !s.includes(status)) setStatus("");
       } catch {
-        // fallback to defaults
+        /* fallback to defaults */
       }
     })();
-    return () => { ignore = true; };
-  }, []);
+    return () => controller.abort();
+  }, [purpose, status]);
 
   const handleSearch = () => {
     setCommittedPurpose(purpose);
     setCommittedStatus(status);
     setCommittedFacility(facilityQuery);
-    setPage(1); // reset to first page on new search
+    setPage(1);
   };
 
   // fetch data when committed filters or page change
   useEffect(() => {
     const controller = new AbortController();
-    const signal = controller.signal;
-
-    const qs = new URLSearchParams();
-    if (committedPurpose) qs.set("purpose", committedPurpose);
-    if (committedStatus) qs.set("status", committedStatus);
-    if (committedFacility) qs.set("facility", committedFacility);
-    qs.set("page", String(page));
-    qs.set("page_size", String(PAGE_SIZE));
-
     (async () => {
       setLoading(true);
       setErr("");
       try {
-        const res = await fetch(`/api/session/list?${qs.toString()}`, {
-          credentials: "include",
-          signal,
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const out = await res.json(); // { items, total, page, page_size }
-        if (signal.aborted) return;
+        const out = await fetchSessionList(
+          {
+            purpose: committedPurpose,
+            status: committedStatus,
+            facility: committedFacility,
+            page,
+            page_size: PAGE_SIZE,
+          },
+          controller.signal
+        );
 
-        const mapped = out.items.map((r) => ({
+        const mapped = (out.items || []).map((r) => ({
           id: r.id,
           facilityName: r.facility_name,
           purpose: r.purpose,
           status: r.status,
           confirmedDate: String(r.confirmed_date ?? "-").replaceAll("-", "/"),
           notionUrl: r.notion_url,
-          progress: { done: 0, total: 0 }, // placeholder
+          // use real progress from session_list_v
+          progress: {
+            done: r.answered ?? 0,
+            total: r.total_evaluators ?? 0,
+          },
         }));
 
         setRows(mapped);
         setTotal(out.total ?? mapped.length);
-        // trust our 'page', but you could also use out.page if returned
       } catch (e) {
-        if (e?.name === "AbortError") return;
-        setErr(String(e?.message || e));
+        if (e?.name !== "AbortError") setErr(String(e?.message || e));
       } finally {
-        if (!signal.aborted) setLoading(false);
+        setLoading(false);
       }
     })();
-
     return () => controller.abort();
   }, [committedPurpose, committedStatus, committedFacility, page]);
 

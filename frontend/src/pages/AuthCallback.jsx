@@ -10,7 +10,7 @@ export default function AuthCallback() {
     const timer = setTimeout(async () => {
       const { data } = await supabase.auth.getSession();
       if (data.session) {
-        nav("/dashboard", { replace: true });
+        nav("/session/list", { replace: true });
       } else {
         nav("/login", { replace: true });
       }

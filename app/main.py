@@ -1,8 +1,7 @@
 from fastapi import FastAPI, APIRouter
-from app.routes import enums
-from app.routes import session_list
-from app.routes import session_create
-from app.routes import notion_fetch
+from app.routes.api.meta import enums
+from app.routes.api.sessions import list
+from app.routes.api.notion import facility_info
 
 app = FastAPI()
 
@@ -15,10 +14,17 @@ def read_root():
 def status_check():
     return {"status": "200"}
 
-# Group routers /api
-api_router = APIRouter(prefix="/api")
+# Group routers /api/sessions
+api_router = APIRouter(prefix="/api/sessions")
+api_router.include_router(list.router)
+app.include_router(api_router)
+
+# Group routers /api/meta
+api_router = APIRouter(prefix="/api/meta")
 api_router.include_router(enums.router)
-api_router.include_router(session_list.router)
-api_router.include_router(session_create.router)
-api_router.include_router(notion_fetch.router)
+app.include_router(api_router)
+
+# Group routers /api/notion
+api_router = APIRouter(prefix="/api/notion")
+api_router.include_router(facility_info.router)
 app.include_router(api_router)

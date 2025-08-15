@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { fetchFacilityInfo } from "../services/sessionService";
 
 const PURPOSE_OPTIONS = ["訪問調査", "聞き取り", "場面観察", "FB", "その他"];
 
@@ -29,11 +30,9 @@ export default function SessionCreate() {
     if (!notionUrl) return;
     setErr("");
     setLoadingFetch(true);
+    const controller = new AbortController();
     try {
-      const res = await fetch(`/api/notion/facility-info?url=${encodeURIComponent(notionUrl)}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-
+      const data = await fetchFacilityInfo(notionUrl, controller.signal);
       setFacilityName(data.facility_name || "");
       setContact(data.contact_person || { name: "", email: "" });
       setEvaluators(Array.isArray(data.evaluators) ? data.evaluators : []);
@@ -49,11 +48,6 @@ export default function SessionCreate() {
   const setDate = (i, v) => setDates((d) => d.map((x, idx) => (idx === i ? v : x)));
   const removeDate = (i) => setDates((d) => d.filter((_, idx) => idx !== i));
 
-  const handleLogout = async () => {
-    await signOut();
-    nav("/login", { replace: true });
-  };
-
   // (stub) create handler
   const handleCreate = async () => {
     setSaving(true);
@@ -64,6 +58,11 @@ export default function SessionCreate() {
     }
   };
 
+  const handleLogout = async () => {
+    await signOut();
+    nav("/login", { replace: true });
+  };
+
   return (
     <div className="min-h-screen bg-gray-200">
       {/* Top Navigation */}
@@ -71,7 +70,7 @@ export default function SessionCreate() {
         <div className="max-w-full mx-auto px-4 py-3 flex justify-end items-center">
           <button
             onClick={handleLogout}
-            className="border border-white bg-transparent text-white font-light px-4 py-1 rounded hover:bg-white hover:text-blue-600"
+            className="border border-white bg-transparent text-white font-light px-4 py-1 rounded hover:bg-white hover:text-blue-600 transition"
           >
             ログアウト
           </button>
@@ -101,6 +100,8 @@ export default function SessionCreate() {
               {loadingFetch ? "取得中…" : "情報取得"}
             </button>
           </div>
+
+          {err && <div className="text-red-600 text-sm">Notion fetch failed: {err}</div>}
 
           {/* 事業所情報（表示のみ） */}
           <div className="border rounded">
@@ -151,9 +152,6 @@ export default function SessionCreate() {
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <div className="w-36 text-xs text-gray-600">調査目的</div>
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <div className="w-36 text-xs text-gray-600">調査目的</div>
               <select
                 className="w-36 rounded border-gray-300 py-1 text-sm"
                 value={purpose}
@@ -167,8 +165,6 @@ export default function SessionCreate() {
 
             <div className="flex items-center gap-3">
               <div className="w-36 text-xs text-gray-600">評価者回答期限</div>
-            <div className="flex items-center gap-3">
-              <div className="w-36 text-xs text-gray-600">評価者回答期限</div>
               <input
                 type="date"
                 className="w-36 rounded border-gray-300 py-1 text-sm"
@@ -177,8 +173,6 @@ export default function SessionCreate() {
               />
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="w-36 text-xs text-gray-600">事業所提示期限</div>
             <div className="flex items-center gap-3">
               <div className="w-36 text-xs text-gray-600">事業所提示期限</div>
               <input
@@ -207,7 +201,7 @@ export default function SessionCreate() {
                       <button
                         type="button"
                         onClick={() => removeDate(i)}
-                        className="px-1 py-1 rounded border text-xs bg-red-500 hover:bg-red-700 text-white flex items-center gap-1"
+                        className="px-2 py-1 rounded border text-xs hover:bg-red-500 hover:text-white transition flex items-center gap-1"
                       >
                         <TrashIcon className="w-4 h-4" /> 削除
                       </button>
@@ -217,15 +211,13 @@ export default function SessionCreate() {
                 <button
                   type="button"
                   onClick={addDateRow}
-                  className="mt-1 px-1 py-1 rounded border text-sm bg-blue-500 hover:bg-blue-700 text-white flex items-center gap-1"
+                  className="mt-1 px-2 py-1 rounded border text-sm hover:bg-blue-500 hover:text-white transition flex items-center gap-1"
                 >
                   <PlusIcon className="w-4 h-4" /> 追加
                 </button>
               </div>
             </div>
           </div>
-
-          {err && <div className="text-red-600 text-sm">{err}</div>}
 
           <div className="pt-2 flex justify-center">
             <button

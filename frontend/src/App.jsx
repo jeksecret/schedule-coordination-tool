@@ -4,20 +4,21 @@ import PrivateRoute from './components/PrivateRoute';
 // Pages
 import Login from './pages/Login';
 import AuthCallback from './pages/AuthCallback';
-import Dashboard from './pages/Dashboard';
-import SessionCreate from "./pages/SessionCreate";
+import SessionList from './pages/SessionList';
+import SessionCreate from './pages/SessionCreate';
 
-export default function App() {
+function App() {
+
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/dashboard" />} />
+      <Route path="/" element={<Navigate to="/login" />} />
       <Route path="/login" element={<Login />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route
-        path="/dashboard"
+        path="/session/list"
         element={
           <PrivateRoute>
-            <Dashboard />
+            <SessionList />
           </PrivateRoute>
         }
       />
@@ -30,5 +31,7 @@ export default function App() {
         }
       />
     </Routes>
-  );
+  )
 }
+
+export default App
