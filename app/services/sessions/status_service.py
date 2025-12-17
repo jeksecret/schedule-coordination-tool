@@ -19,7 +19,8 @@ def _get_session_with_facility(supabase, session_id: int) -> Dict[str, Any]:
     s_res = (
         supabase.table("sessions")
         .select(
-            "id, facility_id, purpose, status, response_deadline, presentation_date, notion_url"
+            "id, facility_id, purpose, status, response_deadline, presentation_date, notion_url, "
+            "facility_form_id, facility_form_view_url, facility_form_edit_url"
         )
         .eq("id", session_id)
         .single()
@@ -45,6 +46,8 @@ def _get_session_with_facility(supabase, session_id: int) -> Dict[str, Any]:
         "response_deadline": s.get("response_deadline"),
         "presentation_date": s.get("presentation_date"),
         "notion_url": s.get("notion_url"),
+        "facility_form_view_url": s.get("facility_form_view_url"),
+        "facility_form_edit_url": s.get("facility_form_edit_url"),
         "facility": {
             "id": f.get("id"),
             "name": f.get("name"),
@@ -251,29 +254,36 @@ def update_evaluator_responses(
     se_id = _resolve_session_evaluator_id(supabase, session_id, evaluator_id)
     valid_slot_ids = _session_slot_ids(supabase, session_id)
 
-    to_upsert: List[Dict[str, Any]] = []
+    # Track desired answer state per slot
+    to_upsert: Dict[int, str] = {}
+    to_delete: Set[int] = set()
 
     for sid, val in (answers or {}).items():
         if sid not in valid_slot_ids:
             continue
+
         if val is None:
+            to_upsert.pop(sid, None)
+            to_delete.add(sid)
             continue
 
         s = str(val).strip()
-        if s == "":
-            continue
-        if s in CHOICE_SYMBOLS:
-            db_choice = SYMBOL_TO_DB[s]
-        elif s.upper() in CHOICE_DB_TOKENS:
-            db_choice = s.upper()
-        else:
+        if not s:
+            to_upsert.pop(sid, None)
+            to_delete.add(sid)
             continue
 
-        to_upsert.append({
-            "session_evaluator_id": se_id,
-            "candidate_slot_id": sid,
-            "choice": db_choice,
-        })
+        if s in CHOICE_SYMBOLS:
+            db_choice = SYMBOL_TO_DB[s]
+        else:
+            token = s.upper()
+            if token in CHOICE_DB_TOKENS:
+                db_choice = token
+            else:
+                continue
+
+        to_upsert[sid] = db_choice
+        to_delete.discard(sid)
 
     now_iso = datetime.now(timezone.utc).isoformat()
     if note is not None:
@@ -287,10 +297,25 @@ def update_evaluator_responses(
         _ = (
             supabase.table("evaluator_responses")
             .upsert(
-                to_upsert,
+                [
+                    {
+                        "session_evaluator_id": se_id,
+                        "candidate_slot_id": sid,
+                        "choice": choice,
+                    }
+                    for sid, choice in to_upsert.items()
+                ],
                 on_conflict="session_evaluator_id,candidate_slot_id",
                 ignore_duplicates=False,
             )
+            .execute()
+        )
+    if to_delete:
+        _ = (
+            supabase.table("evaluator_responses")
+            .delete()
+            .eq("session_evaluator_id", se_id)
+            .in_("candidate_slot_id", sorted(to_delete))
             .execute()
         )
     if note is None:
@@ -305,6 +330,7 @@ def update_evaluator_responses(
         "evaluator_id": evaluator_id,
         "updated_note": note,
         "upserted_count": len(to_upsert),
+        "deleted_count": len(to_delete),
     }
 
 def check_slot_everyone_ok(supabase, session_id: int, slot_id: int) -> Dict[str, Any]:

@@ -1,3 +1,4 @@
+import os
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
@@ -14,21 +15,36 @@ from app.routes.api.hooks.evaluator_response import router as evaluator_response
 from app.routes.api.hooks.client_response import router as client_response_router
 from app.routes.api.hooks.make_form_urls import router as form_urls_hook_router
 from app.routes.api.hooks.auth.before_user_created import router as auth_hook_router
+from app.routes.api.hooks.reminder_mail import router as reminder_mail_router
 
 load_dotenv()
 
 app = FastAPI()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "https://schedule-coordination-tool.onrender.com",
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+DEFAULT_CORS_ORIGINS = (
+    "http://localhost:5173",
+    "https://schedule-coordination-tool.onrender.com",
 )
+
+def _parse_cors_origins(raw: str | None) -> list[str]:
+    if not raw:
+        return list(DEFAULT_CORS_ORIGINS)
+    parsed = [origin.strip() for origin in raw.split(",") if origin.strip()]
+    if "*" in parsed:
+        return ["*"]
+    return parsed or list(DEFAULT_CORS_ORIGINS)
+
+def _configure_cors(application: FastAPI) -> None:
+    origins = _parse_cors_origins(os.getenv("CORS_ALLOW_ORIGINS"))
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_credentials="*" not in origins,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+_configure_cors(app)
 
 @app.get("/")
 def read_root():
@@ -49,8 +65,8 @@ app.include_router(meta_router, prefix="/api/meta", dependencies=deps)
 app.include_router(notion_router, prefix="/api/notion", dependencies=deps)
 app.include_router(evaluator_hook_router, prefix="/api/hooks", dependencies=deps)
 app.include_router(facility_hook_router, prefix="/api/hooks", dependencies=deps)
-
 app.include_router(evaluator_response_router, prefix="/api/hooks")
 app.include_router(client_response_router, prefix="/api/hooks")
 app.include_router(form_urls_hook_router, prefix="/api/hooks")
 app.include_router(auth_hook_router, prefix="/api/hooks/auth")
+app.include_router(reminder_mail_router, prefix="/api/hooks")

@@ -22,7 +22,7 @@ def _get_allowed_domains() -> tuple[str, ...]:
         if raw:
             _ALLOWED_DOMAINS = tuple(d.strip() for d in raw.split(",") if d.strip())
         else:
-            _ALLOWED_DOMAINS = ("smartworx.co.jp", "nabepero.co.jp")
+            _ALLOWED_DOMAINS = ("smartworx.co.jp", "nabepero.co.jp", "cio-sw.com")
     return _ALLOWED_DOMAINS
 
 def _is_allowed_domain(email: str) -> bool:

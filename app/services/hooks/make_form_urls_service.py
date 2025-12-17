@@ -48,3 +48,27 @@ def save_urls_for_session_evaluator(
         .eq("id", session_evaluator_id)
         .execute()
     )
+
+def save_urls_for_session_facility(
+    supabase,
+    *,
+    session_id: int,
+    form_id: str,
+    view_url: str,
+    edit_url: str,
+) -> None:
+    """
+    Persist facility Google Form URLs to `sessions`.
+    Facility can have many sessions ー one form per session.
+    """
+    update: Dict[str, Any] = {
+        "facility_form_id": form_id,
+        "facility_form_view_url": view_url,
+        "facility_form_edit_url": edit_url,
+    }
+    _ = (
+        supabase.table("sessions")
+        .update(update)
+        .eq("id", session_id)
+        .execute()
+    )

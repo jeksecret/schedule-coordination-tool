@@ -1,8 +1,8 @@
-fastapi
-uvicorn
-gunicorn
-supabase
-python-dotenv
-notion-client
-python-jose[cryptography]
-requests
+fastapi==0.116.1
+uvicorn[standard]==0.35.0
+gunicorn==23.0.0
+supabase==2.24.0
+python-dotenv==1.1.1
+notion-client==2.4.0
+python-jose[cryptography]==3.5.0
+requests==2.32.5

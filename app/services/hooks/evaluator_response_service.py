@@ -66,21 +66,8 @@ def insert_evaluator_response(
     session_evaluator_id = ids["session_evaluator_id"]
 
     now_iso = datetime.now(timezone.utc).isoformat()
-    update_data = {"answered_at": now_iso}
-    if note is not None:
-        update_data["note"] = note
-
-    res = (
-        supabase.table("session_evaluators")
-        .update(update_data)
-        .eq("id", session_evaluator_id)
-        .is_("answered_at", None)
-        .execute()
-    )
-    if not res.data:
-        raise ValueError("This evaluator has already submitted a response.")
-
     allowed_slot_ids = _load_slot_ids_for_session(supabase, session_id)
+
     rows: List[Dict[str, Any]] = []
     for raw_sid, raw_token in (answers or {}).items():
         try:
@@ -96,12 +83,29 @@ def insert_evaluator_response(
                 "created_at": now_iso,
             })
 
+    upserted_count = 0
     if rows:
-        _ = (
+        res = (
             supabase.table("evaluator_responses")
             .upsert(rows, on_conflict="session_evaluator_id,candidate_slot_id")
             .execute()
         )
+        upserted_count = len(res.data or [])
+
+    if upserted_count > 0:
+        update_data = {"answered_at": now_iso}
+        if note is not None:
+            update_data["note"] = note
+
+        res = (
+            supabase.table("session_evaluators")
+            .update(update_data)
+            .eq("id", session_evaluator_id)
+            .is_("answered_at", None)
+            .execute()
+        )
+        if not res.data:
+            raise ValueError("This evaluator has already submitted a response.")
 
     try:
         if _all_evaluators_answered(supabase, session_id):
@@ -115,7 +119,7 @@ def insert_evaluator_response(
         "session_id": session_id,
         "evaluator_id": evaluator_id,
         "session_evaluator_id": session_evaluator_id,
-        "answered_at": now_iso,
+        "answered_at": now_iso if upserted_count > 0 else None,
         "upserted_count": len(rows),
     }
 

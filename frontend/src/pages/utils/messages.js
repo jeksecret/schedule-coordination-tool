@@ -1,0 +1,14 @@
+export const MSG_NOTION_FETCH_FAILED = "Notion 情報取得に失敗しました。URLをご確認のうえ、もう一度お試しください。";
+export const MSG_DUPLICATE_CANDIDATE = "同じ日付・文面の候補が重複しています。";
+export const MSG_REQUIRE_NOTION_URL = "Notion URLを入力してください。";
+export const MSG_REQUIRE_FACILITY_INFO = "「情報取得」で事業所情報を取得してください。";
+export const MSG_REQUIRE_FACILITY_CONTACT = "「情報取得」で事業所担当者（氏名・メールアドレス）を取得してください。";
+export const MSG_REQUIRE_CANDIDATE_SLOT = "候補日程を1件以上入力してください。";
+export const MSG_REQUIRE_ALL_OK = "全員が「○」のときのみチェックできます。";
+export const MSG_SELECT_PROPOSED_SLOT = "事業所提案にチェックされた候補がありません。少なくとも1件選択してください。";
+export const MSG_GMAIL_DRAFT_MISSING = "Gmail下書きURLの取得に失敗しました。しばらくしてからもう一度お試しください。";
+export const MSG_TIMEOUT = "タイムアウトしました。もう一度お試しください。";
+export const MSG_DRAFT_GENERIC_ERROR = "下書き作成でエラーが発生しました。";
+export const MSG_DATE_REQUIRED = "を入力してください。";
+export const MSG_DATE_FORMAT_INVALID = "の日付形式が正しくありません。";
+export const MSG_FACILITY_FORM_ALREADY_CREATED = "事業所フォームは既に作成済みです。";

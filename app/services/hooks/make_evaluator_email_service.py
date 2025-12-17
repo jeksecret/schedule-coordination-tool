@@ -5,11 +5,44 @@ import os
 import urllib.request
 import socket
 import secrets
+import re
+from app.services.notion.facility_info_service import fetch_facility_info
 
 _default_timeout = int(os.environ.get("MAKE_HTTP_TIMEOUT_SECONDS", "120"))
 _webhook_url = os.environ.get("MAKE_GENERATE_EVALUATOR_EMAIL")
 if not _webhook_url:
     raise RuntimeError("MAKE_GENERATE_EVALUATOR_EMAIL is not set")
+
+_EMAIL_RE = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}", re.IGNORECASE)
+
+def _extract_emails(text: str) -> List[str]:
+    """Extract all emails from arbitrary text (handles commas/newlines/etc)."""
+    if not text:
+        return []
+    norm = (
+        text.replace("\r\n", " ")
+            .replace("\n", " ")
+            .replace("、", " ")
+            .replace(";", " ")
+            .replace(",", " ")
+    )
+    return [m.strip() for m in _EMAIL_RE.findall(norm)]
+
+def _merge_unique_emails(*lists: List[str]) -> List[str]:
+    seen, out = set(), []
+    for lst in lists:
+        for e in lst or []:
+            k = e.strip().lower()
+            if k and k not in seen:
+                seen.add(k)
+                out.append(e.strip())
+    return out
+
+def _normalize_single_line(text: str) -> str:
+    """Convert multiline or irregular text into a single clean line."""
+    if not text:
+        return ""
+    return re.sub(r"[\r\n]+", " ", text).strip()
 
 def _fetch_session(supabase, session_id: int) -> Dict[str, Any]:
     """Load session fields for email/template."""
@@ -58,7 +91,7 @@ def _ensure_invite_tokens(supabase, session_id: int) -> None:
 
 def _fetch_evaluators_for_session(supabase, session_id: int) -> List[Dict[str, Any]]:
     """
-    Return [{ id, name, email, invite_token }] for this session.
+    Fetch evaluators linked to the given session, with email normalized as list.
     """
     se_rows = (
         supabase.table("session_evaluators")
@@ -83,10 +116,12 @@ def _fetch_evaluators_for_session(supabase, session_id: int) -> List[Dict[str, A
     for se in se_rows:
         eid = se["evaluator_id"]
         ev = ev_map.get(eid, {})
+
+        emails = _extract_emails(ev.get("email") or "")
         out.append({
             "id": eid,
             "name": ev.get("name"),
-            "email": ev.get("email"),
+            "emails": emails,
             "invite_token": se.get("invite_token"),
         })
     return out
@@ -114,10 +149,27 @@ def build_make_payload(supabase, session_id: int) -> Dict[str, Any]:
     s = _fetch_session(supabase, session_id)
     f = _fetch_facility(supabase, s["facility_id"])
 
+    if f.get("name"):
+        f["name"] = _normalize_single_line(f["name"])
+
     _ensure_invite_tokens(supabase, session_id)
 
     evaluators = _fetch_evaluators_for_session(supabase, session_id)
     slots = _fetch_candidate_slots(supabase, session_id)
+
+    db_emails = _extract_emails(f.get("contact_email") or "")
+    notion_emails: List[str] = []
+    notion_url = f.get("notion_url") or s.get("notion_url") or ""
+    if notion_url:
+        try:
+            info = fetch_facility_info(notion_url)
+            notion_emails = info.get("contact_emails") or _extract_emails(
+                (info.get("contact_person") or {}).get("email", "")
+            )
+        except Exception:
+            pass
+
+    recipients = _merge_unique_emails(db_emails, notion_emails)
 
     payload = {
         "session_id": s["id"],
@@ -127,17 +179,17 @@ def build_make_payload(supabase, session_id: int) -> Dict[str, Any]:
         "facility": {
             "name": f.get("name"),
             "contact_name": f.get("contact_name"),
-            "contact_email": f.get("contact_email"),
+            "contact_emails": recipients,
             "notion_url": f.get("notion_url"),
         },
         "evaluators": [
             {
                 "id": e.get("id"),
                 "name": e.get("name"),
-                "email": e.get("email"),
+                "email": e.get("emails"),
                 "invite_token": e.get("invite_token"),
             }
-            for e in (evaluators or [])
+            for e in (evaluators)
         ],
         "candidate_slots": [
             {
@@ -146,16 +198,16 @@ def build_make_payload(supabase, session_id: int) -> Dict[str, Any]:
                 "slot_label": r.get("slot_label"),
                 "sort_order": r.get("sort_order"),
             }
-            for r in (slots or [])
+            for r in (slots)
         ],
     }
     return payload
 
 def post_to_make_webhook(payload: Dict[str, Any], timeout_sec: int = _default_timeout) -> int:
-    """POST JSON to Make webhook; returns HTTP status code."""
-    # Note: ensure_ascii=False allows non-ASCII characters (e.g., Japanese text) to be encoded directly in the JSON payload.
-    # The payload is encoded as UTF-8 and the Content-Type header is set accordingly.
-    # Ensure the Make webhook endpoint can process UTF-8 encoded JSON.
+    """
+    POST to Make and return (status_code, response_text).
+    Raises TimeoutError on socket/URL timeout.
+    """
     body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     req = urllib.request.Request(
         _webhook_url,

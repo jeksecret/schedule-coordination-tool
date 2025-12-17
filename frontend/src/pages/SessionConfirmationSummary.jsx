@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { fetchConfirmationSummary } from "../services/sessionService";
+import { formatDateYMD } from "./utils/dateUtils";
 
 export default function InternalSessionSummary() {
   const { signOut } = useAuth();
@@ -11,15 +12,6 @@ export default function InternalSessionSummary() {
   const [row, setRow] = useState(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
-
-  const formatDate = (value) => {
-    if (!value) return "ー";
-    const d = new Date(value);
-    if (isNaN(d.getTime())) return "ー";
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-      d.getDate()
-    ).padStart(2, "0")}`;
-  };
 
   useEffect(() => {
     const controller = new AbortController();
@@ -38,8 +30,9 @@ export default function InternalSessionSummary() {
         setRow(null);
         setErr(String(e?.message || e));
       } finally {
-        if (!active || controller.signal.aborted) return;
-        setLoading(false);
+        if (active && !controller.signal.aborted) {
+          setLoading(false);
+        }
       }
     })();
 
@@ -75,7 +68,7 @@ export default function InternalSessionSummary() {
         <div className="max-w-full mx-auto px-4 py-3 flex justify-end items-center">
           <button
             onClick={handleLogout}
-            className="border border-white bg-transparent text-white font-light px-4 py-1 rounded hover:bg-white hover:text-blue-600"
+            className="text-xs border border-white bg-transparent text-white font-light px-4 py-2 rounded hover:bg-white hover:text-blue-600"
           >
             ログアウト
           </button>
@@ -83,12 +76,12 @@ export default function InternalSessionSummary() {
       </nav>
 
       {/* Main content */}
-      <main className="max-w-5xl mx-auto px-4 py-6">
+      <main className="max-w-7xl mx-auto px-4 py-6">
         <div className="py-2">
           <button
             type="button"
             onClick={handleBack}
-            className="flex items-center px-3 py-2 gap-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700"
+            className="flex items-center px-3 py-2 gap-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700"
           >
             一覧へ戻る
           </button>
@@ -106,18 +99,13 @@ export default function InternalSessionSummary() {
         {/* Error */}
         {!loading && err && (
           <div className="p-6 rounded-md bg-white border shadow-sm">
-            <div className="text-red-600 text-sm">{err}</div>
+            <div className="text-red-600 text-xs">{err}</div>
           </div>
         )}
 
         {/* Content */}
         {!loading && !err && row && (
           <div className="space-y-6">
-            {/* Page Title */}
-            <div className="bg-white border rounded shadow-sm p-4">
-              <h1 className="text-base font-semibold text-gray-700">セッション確認サマリー</h1>
-            </div>
-
             {/* 基本情報 */}
             <div className="bg-white border rounded shadow-sm p-4">
               <h2 className="text-base font-medium text-gray-700">基本情報</h2>
@@ -126,7 +114,7 @@ export default function InternalSessionSummary() {
                 {/* 事業所名 */}
                 <div className="flex items-center py-2">
                   <dt className="w-36 text-xs text-gray-600">事業所名</dt>
-                  <dd className="flex-1 text-sm">
+                  <dd className="flex-1 text-xs">
                     {row.facility_notion_url ? (
                       <a
                         className="text-blue-700 hover:underline break-all"
@@ -145,14 +133,12 @@ export default function InternalSessionSummary() {
                 {/* 事業所担当者 */}
                 <div className="flex items-center py-2">
                   <dt className="w-36 text-xs text-gray-600">事業所担当者</dt>
-                  <dd className="flex-1 text-sm">
+                  <dd className="flex-1 text-xs">
                     {row.facility_contact_name || contactEmails.length ? (
                       <span>
                         {row.facility_contact_name || ""}
                         {contactEmails.length
-                          ? row.facility_contact_name
-                            ? `（${contactEmails.join(" ")}）`
-                            : contactEmails.join(" ")
+                          ? `（${contactEmails.join(" ")}）`
                           : ""}
                       </span>
                     ) : (
@@ -164,7 +150,7 @@ export default function InternalSessionSummary() {
                 {/* 調査目的 */}
                 <div className="flex items-center py-2">
                   <dt className="w-36 text-xs text-gray-600">調査目的</dt>
-                  <dd className="flex-1 text-sm">
+                  <dd className="flex-1 text-xs">
                     {row.purpose || <span className="text-gray-400">-</span>}
                   </dd>
                 </div>
@@ -172,7 +158,7 @@ export default function InternalSessionSummary() {
                 {/* ステータス */}
                 <div className="flex items-center py-2">
                   <dt className="w-36 text-xs text-gray-600">ステータス</dt>
-                  <dd className="flex-1 text-sm">
+                  <dd className="flex-1 text-xs">
                     {row.status || <span className="text-gray-400">-</span>}
                   </dd>
                 </div>
@@ -186,14 +172,14 @@ export default function InternalSessionSummary() {
               <dl className="divide-y">
                 <div className="flex items-center py-2">
                   <dt className="w-36 text-xs text-gray-600">回答日</dt>
-                  <dd className="flex-1 text-sm">{formatDate(row.client_answered_at)}</dd>
+                  <dd className="flex-1 text-xs">{formatDateYMD(row.client_answered_at)}</dd>
                 </div>
                 <div className="flex items-center py-2">
                   <dt className="w-36 text-xs text-gray-600 leading-7">希望日程</dt>
-                  <dd className="flex-1 text-sm">
+                  <dd className="flex-1 text-xs">
                     {row.preferred_slot_id ? (
                       <div className="flex flex-wrap items-center gap-x-1 gap-y-1">
-                        <span className="text-gray-900">{formatDate(row.preferred_slot_date)}</span>
+                        <span className="text-gray-900">{formatDateYMD(row.preferred_slot_date)}</span>
                         <span className="text-gray-900">{row.preferred_slot_label || "—"}</span>
                       </div>
                     ) : (
@@ -203,8 +189,8 @@ export default function InternalSessionSummary() {
                 </div>
                 <div className="flex items-center py-2">
                   <dt className="w-36 text-xs text-gray-600 leading-7">備考</dt>
-                  <dd className="flex-1 text-sm whitespace-pre-wrap">
-                    {row.client_note || <span className="text-gray-400">-</span>}
+                  <dd className="flex-1 text-xs whitespace-pre-wrap">
+                    {row.client_note || <span className="text-gray-400">－</span>}
                   </dd>
                 </div>
               </dl>
@@ -215,7 +201,7 @@ export default function InternalSessionSummary() {
               <h2 className="text-base font-medium text-gray-700">評価者</h2>
               <hr className="my-3 border-gray-200" />
               <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
+                <table className="min-w-full text-xs">
                   <thead>
                     <tr className="text-left text-gray-500">
                       <th className="py-2 pr-4">氏名</th>

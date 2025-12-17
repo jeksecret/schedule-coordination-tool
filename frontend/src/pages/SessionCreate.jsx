@@ -1,20 +1,23 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { fetchFacilityInfo, createSession, generateEvaluatorEmail } from "../services/sessionService";
-
-const PURPOSE_OPTIONS = ["訪問調査", "聞き取り", "場面観察", "FB", "その他"];
-
-const todayYMD = () => {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-};
-
-const isYmd = (s) => /^\d{4}-\d{2}-\d{2}$/.test(String(s || ""));
+import {
+  isYmd,
+  todayYMD,
+  validateRequiredDate,
+  requiredDateMessage,
+  invalidDateFormatMessage,
+} from "./utils/dateUtils";
+import { PURPOSE_OPTIONS } from "./utils/constants";
+import {
+  MSG_NOTION_FETCH_FAILED,
+  MSG_DUPLICATE_CANDIDATE,
+  MSG_REQUIRE_NOTION_URL,
+  MSG_REQUIRE_FACILITY_INFO,
+  MSG_REQUIRE_FACILITY_CONTACT,
+  MSG_REQUIRE_CANDIDATE_SLOT,
+} from "./utils/messages";
 
 export default function SessionCreate() {
   const nav = useNavigate();
@@ -60,7 +63,7 @@ export default function SessionCreate() {
       setEvaluators(Array.isArray(data.evaluators) ? data.evaluators : []);
     } catch {
       resetFacilityBlock();
-      setFetchErr("Notion 情報取得に失敗しました。URLをご確認のうえ、もう一度お試しください。");
+      setFetchErr(MSG_NOTION_FETCH_FAILED);
     } finally {
       setLoadingFetch(false);
     }
@@ -89,39 +92,28 @@ export default function SessionCreate() {
     const keys = filled.map((r) => `${r.date}|${r.label.trim()}`);
     const seen = new Set();
     for (const k of keys) {
-      if (seen.has(k)) return "同じ日付・文面の候補が重複しています。";
+      if (seen.has(k)) return MSG_DUPLICATE_CANDIDATE;
       seen.add(k);
     }
 
-    if (!notionUrl?.trim()) return "Notion URLを入力してください。";
-    if (!facilityName?.trim()) return "「情報取得」で事業所情報を取得してください。";
+    if (!notionUrl?.trim()) return MSG_REQUIRE_NOTION_URL;
+    if (!facilityName?.trim()) return MSG_REQUIRE_FACILITY_INFO;
     if (!contact?.name?.trim() || !contact?.email?.trim())
-      return "「情報取得」で事業所担当者（氏名・メールアドレス）を取得してください。";
-    if (filled.length === 0) return "候補日程を1件以上入力してください。";
+      return MSG_REQUIRE_FACILITY_CONTACT;
+    if (filled.length === 0) return MSG_REQUIRE_CANDIDATE_SLOT;
     return null;
   };
 
-  const responseDateError =
-    !responseDeadline
-      ? "評価者回答期限を入力してください。"
-      : !isYmd(responseDeadline)
-      ? "評価者回答期限の日付形式が正しくありません。"
-      : "";
-
-  const presentationDateError =
-    !presentationDate
-      ? "事業所提示期限を入力してください。"
-      : !isYmd(presentationDate)
-      ? "事業所提示期限の日付形式が正しくありません。"
-      : "";
+  const responseDateError = validateRequiredDate(responseDeadline, "評価者回答期限");
+  const presentationDateError = validateRequiredDate(presentationDate, "事業所提示期限");
 
   const slotDateErrors = useMemo(
     () =>
       slots.map((r) => {
         const hasAny = (r.date && r.date.trim()) || (r.label && r.label.trim());
         if (!hasAny) return "";
-        if (!r.date) return "日付を入力してください。";
-        if (!isYmd(r.date)) return "日付形式が正しくありません。";
+        if (!r.date) return requiredDateMessage("日付");
+        if (!isYmd(r.date)) return invalidDateFormatMessage("日付");
         return "";
       }),
     [slots]
@@ -185,7 +177,7 @@ export default function SessionCreate() {
         <div className="fixed inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="p-4 rounded-xl border bg-white shadow">
             <div className="animate-spin w-5 h-5 border-2 border-blue-200 border-t-blue-600 rounded-full mx-auto mb-3"></div>
-            <div className="text-sm">保存中…</div>
+            <div className="text-xs">保存中…</div>
           </div>
         </div>
       )}
@@ -195,7 +187,7 @@ export default function SessionCreate() {
         <div className="max-w-full mx-auto px-4 py-3 flex justify-end items-center">
           <button
             onClick={handleLogout}
-            className="border border-white bg-transparent text-white font-light px-4 py-1 rounded hover:bg-white hover:text-blue-600"
+            className="text-xs border border-white bg-transparent text-white font-light px-4 py-2 rounded hover:bg-white hover:text-blue-600"
           >
             ログアウト
           </button>
@@ -203,12 +195,12 @@ export default function SessionCreate() {
       </nav>
 
       {/* Main content */}
-      <main className="max-w-3xl mx-auto px-4 py-6">
+      <main className="max-w-4xl mx-auto px-4 py-6">
         <div className="py-2">
           <button
             type="button"
             onClick={handleBack}
-            className="flex items-center px-3 py-2 gap-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700"
+            className="flex items-center px-3 py-2 gap-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700"
           >
             一覧へ戻る
           </button>
@@ -229,9 +221,9 @@ export default function SessionCreate() {
 
           {/* Notion URL */}
           <div className="flex flex-wrap items-center gap-2">
-            <div className="text-sm text-gray-700">Notion URL</div>
+            <div className="text-xs text-gray-700">Notion URL</div>
             <input
-              className="flex-1 rounded border border-gray-300 px-3 py-2 text-sm"
+              className="flex-1 rounded border border-gray-300 px-3 py-2 text-xs"
               placeholder="https://www.notion.so/..."
               value={notionUrl}
               onChange={(e) => {
@@ -246,7 +238,7 @@ export default function SessionCreate() {
               type="button"
               onClick={handleFetchInfo}
               disabled={loadingFetch || !notionUrl}
-              className="px-3 py-2 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 disabled:opacity-60"
+              className="px-3 py-2 rounded bg-blue-600 text-white text-xs hover:bg-blue-700 disabled:opacity-60"
             >
               {loadingFetch ? "取得中…" : "情報取得"}
             </button>
@@ -261,26 +253,26 @@ export default function SessionCreate() {
             <dl className="divide-y">
               <div className="flex items-center px-3 py-2">
                 <dt className="w-36 text-xs text-gray-600">事業所名</dt>
-                <dd className="flex-1 text-sm">
-                  {facilityName ? <span className="text-gray-900">{facilityName}</span> : <span className="text-gray-400">-</span>}
+                <dd className="flex-1 text-xs">
+                  {facilityName ? <span className="text-gray-900">{facilityName}</span> : <span className="text-gray-400">－</span>}
                 </dd>
               </div>
               <div className="flex items-center px-3 py-2">
                 <dt className="w-36 text-xs text-gray-600">事業所担当者</dt>
-                <dd className="flex-1 text-sm">
+                <dd className="flex-1 text-xs">
                   {contact?.name || contact?.email ? (
                     <span>
                       {contact.name || ""}
                       {contact.email ? (contact.name ? `（${contact.email}）` : contact.email) : ""}
                     </span>
                   ) : (
-                    <span className="text-gray-400">-</span>
+                    <span className="text-gray-400">－</span>
                   )}
                 </dd>
               </div>
               <div className="flex items-start px-3 py-2">
                 <dt className="w-36 text-xs text-gray-600 leading-7">評価者</dt>
-                <dd className="flex-1 text-sm">
+                <dd className="flex-1 text-xs">
                   {evaluators?.length ? (
                     <ul className="space-y-1">
                       {evaluators.map((e, i) => (
@@ -290,7 +282,7 @@ export default function SessionCreate() {
                       ))}
                     </ul>
                   ) : (
-                    <span className="text-gray-400">-</span>
+                    <span className="text-gray-400">－</span>
                   )}
                 </dd>
               </div>
@@ -302,7 +294,7 @@ export default function SessionCreate() {
             <div className="flex items-center gap-3">
               <div className="w-36 text-xs text-gray-600">調査目的</div>
               <select
-                className="w-36 rounded border-gray-300 py-1 text-sm"
+                className="w-36 rounded py-1 text-xs"
                 value={purpose}
                 onChange={(e) => {
                   setInlineErr("");
@@ -320,7 +312,7 @@ export default function SessionCreate() {
               <div className="flex-1">
                 <input
                   type="date"
-                  className="w-36 rounded border-gray-300 py-1 text-sm"
+                  className="w-36 rounded border-gray-300 py-1 text-xs"
                   value={responseDeadline}
                   onChange={(e) => {
                     setInlineErr("");
@@ -339,7 +331,7 @@ export default function SessionCreate() {
               <div className="flex-1">
                 <input
                   type="date"
-                  className="w-36 rounded border-gray-300 py-1 text-sm"
+                  className="w-36 rounded border-gray-300 py-1 text-xs"
                   value={presentationDate}
                   onChange={(e) => {
                     setInlineErr("");
@@ -363,14 +355,14 @@ export default function SessionCreate() {
                     <div className="flex items-center gap-2">
                       <input
                         type="date"
-                        className="w-36 rounded border-gray-300 text-sm"
+                        className="w-36 rounded border-gray-300 py-1 text-xs"
                         value={row.date}
                         onChange={(e) => setSlotDate(i, e.target.value)}
                         min={MIN_DATE}
                       />
                       <input
                         type="text"
-                        className="flex-1 rounded border border-gray-300 text-sm px-3 py-2"
+                        className="flex-1 rounded border border-gray-300 text-xs px-2 py-2"
                         value={row.label}
                         onChange={(e) => setSlotLabel(i, e.target.value)}
                       />
@@ -380,7 +372,6 @@ export default function SessionCreate() {
                           onClick={() => removeSlot(i)}
                           className="px-2 py-1 rounded border text-xs bg-red-600 hover:bg-red-700 text-white flex items-center gap-1"
                         >
-                          <TrashIcon className="w-4 h-4" />
                           削除
                         </button>
                       )}
@@ -393,9 +384,8 @@ export default function SessionCreate() {
                 <button
                   type="button"
                   onClick={addSlotRow}
-                  className="mt-1 px-2 py-1 rounded border text-sm bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1"
+                  className="mt-1 px-2 py-1 rounded border text-xs bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1"
                 >
-                  <PlusIcon className="w-4 h-4" />
                   追加
                 </button>
               </div>
@@ -411,7 +401,7 @@ export default function SessionCreate() {
               type="button"
               onClick={handleCreate}
               disabled={!canSubmit}
-              className="w-full md:w-auto px-3 py-2 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 disabled:opacity-60"
+              className="w-full md:w-auto px-3 py-2 rounded bg-blue-600 text-white text-xs hover:bg-blue-700 disabled:opacity-60"
             >
               {saving ? "保存中…" : "保存して文面作成"}
             </button>

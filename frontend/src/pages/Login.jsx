@@ -7,20 +7,21 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-gray-200 grid place-items-center px-4">
       <div className="w-full max-w-md bg-white rounded-lg border shadow-sm p-6">
-        <h1 className="text-lg font-semibold mb-4">社内ログイン</h1>
+        <h1 className="text-base font-semibold mb-4">社内ログイン</h1>
         <p className="text-sm text-gray-500">Googleアカウントでログインしてください。</p>
 
         {err === "domain" && (
-          <div className="mt-3 mb-4 text-sm text-red-600">
+          <div className="mt-2 mb-4 text-xs text-red-600">
             このサービスは社内アカウントのみ利用できます。
             <br />
-            <span className="font-medium">@smartworx.co.jp</span> または{" "}
-            <span className="font-medium">@nabepero.co.jp</span> のメールでログインしてください。
+            <span className="font-medium">@smartworx.co.jp、</span>
+            <span className="font-medium">@nabepero.co.jp、</span>または{" "}
+            <span className="font-medium">@cio-sw.com</span> のメールでログインしてください。
           </div>
         )}
 
         {err === "signedout" && (
-          <div className="mt-3 mb-4 text-sm text-gray-600">
+          <div className="mt-2 mb-4 text-xs text-red-600">
             ログアウトしました。再度ログインしてください。
           </div>
         )}
@@ -34,7 +35,7 @@ export default function Login() {
             alt="Google logo"
             className="w-5 h-5"
           />
-          <span>Googleでログイン</span>
+          <span className="text-sm text-gray-700">Googleでログイン</span>
         </button>
       </div>
     </div>

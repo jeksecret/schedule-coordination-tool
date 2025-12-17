@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -9,15 +9,29 @@ import {
   generateFacilityEmail,
   extractGmailDraftUrl
 } from "../services/sessionService";
-
-const PURPOSE_OPTIONS = ["訪問調査", "聞き取り", "場面観察", "FB", "その他"];
-const DAYS_LABEL = ["日", "月", "火", "水", "木", "金", "土"];
-const TOKEN_TO_SYMBOL = { O: "○", M: "△", X: "x" };
-const isYmd = (s) => /^\d{4}-\d{2}-\d{2}$/.test(String(s || ""));
+import { PURPOSE_OPTIONS } from "./utils/constants";
+import {
+  TOKEN_TO_SYMBOL,
+  buildInitialAnswers,
+  buildInitialNotes,
+  buildInitialProposed,
+  formatAnsweredAt,
+  formatSlot,
+  validateRequiredDate
+} from "./utils/sessionStatusUtils";
+import {
+  MSG_REQUIRE_ALL_OK,
+  MSG_SELECT_PROPOSED_SLOT,
+  MSG_GMAIL_DRAFT_MISSING,
+  MSG_TIMEOUT,
+  MSG_DRAFT_GENERIC_ERROR,
+  MSG_FACILITY_FORM_ALREADY_CREATED,
+} from "./utils/messages";
 
 export default function SessionStatus() {
   const { signOut } = useAuth();
   const nav = useNavigate();
+  const makeDraftLock = useRef(false);
 
   // data state
   const { id } = useParams();
@@ -76,44 +90,18 @@ export default function SessionStatus() {
     setResponseDeadline(data.session.response_deadline || "");
     setPresentationDate(data.session.presentation_date || "");
 
-    // initialize answers to blank
-    const initAns = {};
-    for (const ev of data.evaluators || []) {
-      for (const slot of data.slots || []) {
-        initAns[`${ev.id}_${slot.id}`] = "";
-      }
-    }
-    setLocalAnswers(initAns);
-
-    // notes
-    const initNotes = {};
-    for (const ev of data.evaluators || []) {
-      initNotes[ev.id] = ev.note || "";
-    }
-    setNotes(initNotes);
-
-    // checkboxes
-    const initProp = {};
-    for (const s of data.slots || []) initProp[s.id] = false;
-    setProposed(initProp);
+    setLocalAnswers(
+      buildInitialAnswers(data.evaluators || [], data.slots || [], data.answers || {})
+    );
+    setNotes(buildInitialNotes(data.evaluators || []));
+    setProposed(buildInitialProposed(data.slots || []));
   }, [data]);
 
   const getAns = (eId, sId) => localAnswers[`${eId}_${sId}`] ?? "";
   const setAns = (eId, sId, v) => setLocalAnswers((m) => ({ ...m, [`${eId}_${sId}`]: v }));
 
-  const responseDateError =
-    !responseDeadline
-      ? "評価者回答期限を入力してください。"
-      : !isYmd(responseDeadline)
-      ? "評価者回答期限の日付形式が正しくありません。"
-      : "";
-
-  const presentationDateError =
-    !presentationDate
-      ? "事業所提示期限を入力してください。"
-      : !isYmd(presentationDate)
-      ? "事業所提示期限の日付形式が正しくありません。"
-      : "";
+  const responseDateError = validateRequiredDate(responseDeadline, "評価者回答期限");
+  const presentationDateError = validateRequiredDate(presentationDate, "事業所提示期限");
 
   // aggregate when checked
   const handleProposedCheck = async (slotId, nextChecked) => {
@@ -121,13 +109,6 @@ export default function SessionStatus() {
     setInlineErr("");
     if (!nextChecked) {
       setProposed((m) => ({ ...m, [slotId]: false }));
-      setLocalAnswers((m) => {
-        const next = { ...m };
-        for (const ev of data.evaluators || []) {
-          next[`${ev.id}_${slotId}`] = "";
-        }
-        return next;
-      });
       return;
     }
     try {
@@ -139,7 +120,7 @@ export default function SessionStatus() {
       const ok = !!out?.everyone_ok;
       setProposed((m) => ({ ...m, [slotId]: ok }));
       if (!ok) {
-        setInlineErr("全員が「○」のときのみチェックできます。");
+        setInlineErr(MSG_REQUIRE_ALL_OK);
         return;
       }
       setLocalAnswers((m) => {
@@ -208,9 +189,19 @@ export default function SessionStatus() {
   const handleMakeFacilityEmailDraft = async () => {
     setInlineErr("");
 
+    if (makeDraftLock.current) return;
+    makeDraftLock.current = true;
+
+    if (data?.session?.facility_form_edit_url || data?.session?.facility_form_view_url) {
+      setInlineErr(MSG_FACILITY_FORM_ALREADY_CREATED);
+      makeDraftLock.current = false;
+      return;
+    }
+
     const checked = (data?.slots ?? []).filter(s => !!proposed[s.id]).map(s => s.id);
     if (!checked.length) {
-      setInlineErr("事業所提案にチェックされた候補がありません。少なくとも1件選択してください。");
+      setInlineErr(MSG_SELECT_PROPOSED_SLOT);
+      makeDraftLock.current = false;
       return;
     }
 
@@ -224,14 +215,18 @@ export default function SessionStatus() {
       const url = extractGmailDraftUrl(res);
 
       if (!url) {
-        setInlineErr("Gmail下書きURLの取得に失敗しました。しばらくしてからもう一度お試しください。");
+        setInlineErr(MSG_GMAIL_DRAFT_MISSING);
         return;
       }
 
       const win = window.open(url, "_blank");
       if (win) {
-        try { win.opener = null; } catch {}
-        try { setTimeout(() => win.focus?.(), 50); } catch {}
+        if (typeof win.opener !== "undefined") {
+          win.opener = null;
+        }
+        if (typeof win.focus === "function") {
+          setTimeout(() => win.focus(), 50);
+        }
       }
 
       const popupBlocked = !win;
@@ -251,10 +246,11 @@ export default function SessionStatus() {
     } catch (e) {
       setInlineErr(
         e?.name === "AbortError"
-          ? "タイムアウトしました。もう一度お試しください。"
-          : (e?.message || "下書き作成でエラーが発生しました。")
+          ? MSG_TIMEOUT
+          : e?.message || MSG_DRAFT_GENERIC_ERROR
       );
     } finally {
+      makeDraftLock.current = false;
       clearTimeout(timeoutId);
       setMakingDraft(false);
     }
@@ -267,27 +263,8 @@ export default function SessionStatus() {
 
   const handleBack = () => nav("/session/list");
 
-  const formatAnsweredAt = (answeredAt) => {
-    if (!answeredAt) return "ー";
-    const d = new Date(answeredAt);
-    if (isNaN(d.getTime())) return "ー";
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-      d.getDate()
-    ).padStart(2, "0")}`;
-  };
-
-  const formatSlot = (slot) => {
-    const d = new Date(`${slot.slot_date}T00:00:00`);
-    const dateStr = isNaN(d.getTime())
-      ? String(slot.slot_date ?? "")
-      : `${String(d.getMonth() + 1).padStart(2, "0")}/${String(
-          d.getDate()
-        ).padStart(2, "0")}（${DAYS_LABEL[d.getDay()]}）`;
-    return slot.slot_label ? `${dateStr} ${slot.slot_label}` : dateStr;
-  };
-
   const selectClass = (disabled) =>
-    `w-40 py-1 rounded border-gray-300 text-sm text-center ${
+    `w-36 py-1 rounded border-gray-300 text-xs text-center ${
       disabled ? "bg-gray-100 text-gray-500 cursor-not-allowed" : ""
     }`;
 
@@ -297,7 +274,7 @@ export default function SessionStatus() {
         <div className="fixed inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="p-4 rounded-xl border bg-white shadow">
             <div className="animate-spin w-5 h-5 border-2 border-blue-200 border-t-blue-600 rounded-full mx-auto mb-3"></div>
-            <div className="text-sm">事業所向けメールの下書きを作成中…</div>
+            <div className="text-xs">事業所向けメールの下書きを作成中…</div>
           </div>
         </div>
       )}
@@ -307,7 +284,7 @@ export default function SessionStatus() {
         <div className="max-w-full mx-auto px-4 py-3 flex justify-end items-center">
           <button
             onClick={handleLogout}
-            className="border border-white bg-transparent text-white font-light px-4 py-1 rounded hover:bg-white hover:text-blue-600"
+            className="text-xs border border-white bg-transparent text-white font-light px-4 py-2 rounded hover:bg-white hover:text-blue-600"
           >
             ログアウト
           </button>
@@ -315,12 +292,12 @@ export default function SessionStatus() {
       </nav>
 
       {/* Main content */}
-      <main className="max-w-5xl mx-auto px-4 py-6">
+      <main className="max-w-7xl mx-auto px-4 py-6">
         <div className="py-2">
           <button
             type="button"
             onClick={handleBack}
-            className="flex items-center px-3 py-2 gap-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700"
+            className="flex items-center px-3 py-2 gap-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700"
           >
             一覧へ戻る
           </button>
@@ -338,7 +315,7 @@ export default function SessionStatus() {
         {/* Error */}
         {!loading && pageErr && (
           <div className="p-6 rounded-md bg-white border shadow-sm">
-            <div className="text-red-600 text-sm">{pageErr}</div>
+            <div className="text-red-600 text-xs">{pageErr}</div>
           </div>
         )}
 
@@ -353,7 +330,7 @@ export default function SessionStatus() {
                 {/* 事業所名 */}
                 <div className="flex items-center py-2">
                   <dt className="w-36 text-xs text-gray-600">事業所名</dt>
-                  <dd className="flex-1 text-sm">
+                  <dd className="flex-1 text-xs">
                     {data.session?.facility?.notion_url ? (
                       <a
                         className="text-blue-700 hover:underline"
@@ -372,7 +349,7 @@ export default function SessionStatus() {
                 {/* 事業所担当者 */}
                 <div className="flex items-center py-2">
                   <dt className="w-36 text-xs text-gray-600">事業所担当者</dt>
-                  <dd className="flex-1 text-sm">
+                  <dd className="flex-1 text-xs">
                     {data.session.facility.contact_name || data.session.facility.contact_email ? (
                       `${data.session.facility.contact_name || ""}${
                         data.session.facility.contact_email
@@ -385,10 +362,48 @@ export default function SessionStatus() {
                   </dd>
                 </div>
 
-                {/* 評価者 */}
+                {/* 事業所フォーム */}
                 <div className="flex items-center py-2">
+                  <dt className="w-36 text-xs text-gray-600">事業所フォーム</dt>
+                  <dd className="flex-1 text-xs">
+                    {data.session?.facility_form_edit_url || data.session?.facility_form_view_url ? (
+                      <span>
+                        {data.session.facility_form_edit_url ? (
+                          <a
+                            href={data.session.facility_form_edit_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-blue-700 hover:underline"
+                          >
+                            編集用
+                          </a>
+                        ) : (
+                          <span className="text-gray-400">編集用</span>
+                        )}
+                        <span className="mx-1">/</span>
+                        {data.session.facility_form_view_url ? (
+                          <a
+                            href={data.session.facility_form_view_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-blue-700 hover:underline"
+                          >
+                            閲覧用
+                          </a>
+                        ) : (
+                          <span className="text-gray-400">閲覧用</span>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">編集用 / 閲覧用</span>
+                    )}
+                  </dd>
+                </div>
+
+                {/* 評価者 */}
+                <div className="flex items-start py-2">
                   <dt className="w-36 text-xs text-gray-600 leading-7">評価者</dt>
-                  <dd className="flex-1 text-sm">
+                  <dd className="flex-1 text-xs">
                     {Array.isArray(data.evaluators) && data.evaluators.length ? (
                       <ul className="space-y-1">
                         {data.evaluators.map((e, index) => (
@@ -396,22 +411,9 @@ export default function SessionStatus() {
                             <div className="flex flex-wrap items-center gap-2">
                               <span>
                                 {e.name}
-                                {e.email ? `（${e.email}）` : ""}－
+                                {e.email ? `（${e.email}）` : ""}ー
                               </span>
-                              <span className="text-sm">
-                                {e.form_view_url ? (
-                                  <a
-                                    href={e.form_view_url}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="text-blue-700 hover:underline"
-                                  >
-                                    確認用
-                                  </a>
-                                ) : (
-                                  <span className="text-gray-400">確認用 —</span>
-                                )}
-                                <span className="mx-1">/</span>
+                              <span className="text-xs">
                                 {e.form_edit_url ? (
                                   <a
                                     href={e.form_edit_url}
@@ -422,7 +424,20 @@ export default function SessionStatus() {
                                     編集用
                                   </a>
                                 ) : (
-                                  <span className="text-gray-400">編集用 —</span>
+                                  <span className="text-gray-400">編集用</span>
+                                )}
+                                <span className="mx-1">/</span>
+                                {e.form_view_url ? (
+                                  <a
+                                    href={e.form_view_url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-blue-700 hover:underline"
+                                  >
+                                    閲覧用
+                                  </a>
+                                ) : (
+                                  <span className="text-gray-400">閲覧用</span>
                                 )}
                               </span>
                             </div>
@@ -430,7 +445,7 @@ export default function SessionStatus() {
                         ))}
                       </ul>
                     ) : (
-                      <span className="text-gray-400">-</span>
+                      <span className="text-gray-400">－</span>
                     )}
                   </dd>
                 </div>
@@ -440,7 +455,7 @@ export default function SessionStatus() {
                   <dt className="w-36 text-xs text-gray-600">調査目的</dt>
                   <dd className="flex-1">
                     <select
-                      className="w-36 rounded border-gray-300 py-1 text-sm"
+                      className="w-36 rounded border-gray-300 py-1 text-xs"
                       value={purpose}
                       onChange={(e) => setPurpose(e.target.value)}
                     >
@@ -454,12 +469,12 @@ export default function SessionStatus() {
                 </div>
 
                 {/* 評価者回答期限（編集・インラインエラー） */}
-                <div className="flex items-start py-2 gap-3">
+                <div className="flex items-start py-2">
                   <dt className="w-36 text-xs text-gray-600 mt-2">評価者回答期限</dt>
                   <dd className="flex-1">
                     <input
                       type="date"
-                      className="w-36 rounded border-gray-300 py-1 text-sm"
+                      className="w-36 rounded border-gray-300 py-1 text-xs"
                       value={responseDeadline || ""}
                       onChange={(e) => setResponseDeadline(e.target.value)}
                     />
@@ -470,12 +485,12 @@ export default function SessionStatus() {
                 </div>
 
                 {/* 事業所提示期限（編集・インラインエラー） */}
-                <div className="flex items-start py-2 gap-3">
+                <div className="flex items-start py-2">
                   <dt className="w-36 text-xs text-gray-600 mt-2">事業所提示期限</dt>
                   <dd className="flex-1">
                     <input
                       type="date"
-                      className="w-36 rounded border-gray-300 py-1 text-sm"
+                      className="w-36 rounded border-gray-300 py-1 text-xs"
                       value={presentationDate || ""}
                       onChange={(e) => setPresentationDate(e.target.value)}
                     />
@@ -492,7 +507,7 @@ export default function SessionStatus() {
                   type="button"
                   onClick={handleUpdateSession}
                   disabled={saving}
-                  className={`px-3 py-2 rounded text-sm text-white ${
+                  className={`px-3 py-2 rounded text-xs text-white ${
                     saving
                       ? "bg-blue-300 cursor-not-allowed"
                       : "bg-blue-600 hover:bg-blue-700"
@@ -508,7 +523,7 @@ export default function SessionStatus() {
               <h2 className="text-base font-medium text-gray-700">日程調整状況</h2>
               <hr className="my-3 border-gray-200" />
               <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
+                <table className="min-w-full text-xs">
                   <thead className="bg-gray-50">
                     <tr className="[&>th]:px-2 [&>th]:py-2">
                       <th className="w-40 text-left">回答日</th>
@@ -536,12 +551,11 @@ export default function SessionStatus() {
                           <td className="text-center">
                             <input
                               type="checkbox"
-                              className="h-4 w-4"
+                              className="h-3 w-3"
                               checked={!!proposed[slot.id]}
                               onChange={(ev) =>
                                 handleProposedCheck(slot.id, ev.target.checked)
                               }
-                              title="全員が「○」の場合のみチェックできます"
                             />
                           </td>
                           {/* 評価者ごとの回答 */}
@@ -571,12 +585,13 @@ export default function SessionStatus() {
                     })}
                     {/* 備考 */}
                     <tr className="[&>td]:px-2 [&>td]:py-2">
-                      <td className="text-gray-700">備考</td>
+                      <td className="flex items-start text-gray-700">備考</td>
                       <td></td>
                       {data.evaluators.map((e) => (
                         <td key={`note_${e.id}`} className="text-center">
-                          <input
-                            className="w-40 rounded border border-gray-300 text-sm px-2 py-1"
+                          <textarea
+                            rows={4}
+                            className="w-48 rounded border border-gray-300 text-xs px-2 py-1"
                             value={notes[e.id] ?? ""}
                             onChange={(ev) =>
                               setNotes((m) => ({ ...m, [e.id]: ev.target.value }))
@@ -596,7 +611,7 @@ export default function SessionStatus() {
                             type="button"
                             onClick={() => handleUpdateEvaluatorResponse(e.id)}
                             disabled={saving}
-                            className={`px-3 py-2 text-white text-sm rounded ${
+                            className={`px-3 py-2 text-white text-xs rounded ${
                               saving
                                 ? "bg-blue-300 cursor-not-allowed"
                                 : "bg-blue-600 hover:bg-blue-700"
@@ -612,7 +627,7 @@ export default function SessionStatus() {
               </div>
 
               {inlineErr ? (
-                <div className="mt-3 text-xs text-red-600">{inlineErr}</div>
+                <div className="text-xs text-red-600">{inlineErr}</div>
               ) : null}
 
               <div className="mt-4 flex justify-start">
@@ -620,12 +635,11 @@ export default function SessionStatus() {
                   type="button"
                   onClick={handleMakeFacilityEmailDraft}
                   disabled={makingDraft || !hasProposedSelected}
-                  className={`px-4 py-2 text-white text-sm rounded ${
+                  className={`px-4 py-2 text-white text-xs rounded ${
                     makingDraft || !hasProposedSelected
                       ? "bg-blue-300 cursor-not-allowed"
                       : "bg-blue-600 hover:bg-blue-700"
                   }`}
-                  title={hasProposedSelected ? "Make経由でGmail下書きを作成" : "候補にチェックすると有効になります"}
                 >
                   事業所向けメール作成
                 </button>
