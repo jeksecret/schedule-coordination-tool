@@ -1,0 +1,14 @@
+[project]
+name = "schedule-coordination-tool"
+version = "0.1.0"
+requires-python = ">=3.13.5"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "gunicorn",
+    "supabase",
+    "python-dotenv",
+    "notion-client",
+    "python-jose[cryptography]",
+    "requests",
+]
