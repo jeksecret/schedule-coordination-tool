@@ -80,14 +80,13 @@ export default function SessionList() {
         const s = resolveStatusOptions(data);
         setPurposeOptions(toFilterOptions(p));
         setStatusOptions(toFilterOptions(s));
-        if (purpose && !p.includes(purpose)) setPurpose("");
-        if (status && !s.includes(status)) setStatus("");
-      } catch {
-        /* fallback to defaults */
+      } catch (e) {
+        if (e?.name === "AbortError") return;
+        setErr(String(e?.message || e));
       }
     })();
     return () => controller.abort();
-  }, [purpose, status]);
+  }, []);
 
   const handleSearch = () => {
     setCommittedPurpose(purpose);
@@ -145,7 +144,7 @@ export default function SessionList() {
         <div className="max-w-full mx-auto px-4 py-3 flex justify-end items-center">
           <button
             onClick={handleLogout}
-            className="text-xs border border-white bg-transparent text-white font-light px-4 py-2 rounded hover:bg-white hover:text-blue-600"
+            className="text-xs border border-white bg-transparent text-white font-light px-4 py-2 rounded-sm hover:bg-white hover:text-blue-600"
           >
             ログアウト
           </button>
@@ -155,7 +154,7 @@ export default function SessionList() {
       {/* Alert banner */}
       {alert && (
         <div className="max-w-7xl mx-auto px-3">
-          <div className="mt-3 rounded-lg border border-red-500/60 bg-slate-800 text-slate-100 shadow">
+          <div className="mt-3 rounded-sm border border-red-500/60 bg-slate-800 text-slate-100 shadow">
             <div className="p-3">
               <div className="flex items-start gap-2">
                 <div className="flex-1">
@@ -171,14 +170,14 @@ export default function SessionList() {
                         href={alert.href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center rounded-md border border-red-500/60 px-2 py-1 text-xs text-red-200 hover:bg-red-500/10"
+                        className="inline-flex items-center rounded-sm border border-red-500/60 px-2 py-1 text-xs text-red-200 hover:bg-red-500/10"
                       >
                         {alert.actionLabel || "開く"}
                       </a>
                     )}
                     <button
                       onClick={() => setAlert(null)}
-                      className="inline-flex items-center rounded-md border border-slate-600 px-2 py-1 text-xs text-slate-200 hover:bg-white/5"
+                      className="inline-flex items-center rounded-sm border border-slate-600 px-2 py-1 text-xs text-slate-200 hover:bg-white/5"
                       aria-label="閉じる"
                     >
                       閉じる
@@ -199,7 +198,7 @@ export default function SessionList() {
             <h1 className="text-base font-medium text-gray-700">日程調整一覧</h1>
             <button
               onClick={() => nav("/session/create")}
-              className="px-3 py-2 rounded bg-blue-600 text-white text-xs hover:bg-blue-700"
+              className="px-3 py-2 rounded-sm bg-blue-600 text-white text-xs hover:bg-blue-700"
             >
               新規作成
             </button>
@@ -207,14 +206,14 @@ export default function SessionList() {
         </header>
 
         {/* Filters */}
-        <div className="rounded-md bg-white shadow-sm border border-gray-200 p-4">
-          <div className="grid grid-cols-1 md:grid-cols-[200px,200px,1fr,100px] gap-3">
-            <div className="flex items-center gap-2">
+        <div className="rounded-sm bg-white shadow-xs border border-gray-200 p-4">
+          <div className="flex flex-col md:flex-row md:items-center md:gap-4 gap-3">
+            <div className="flex items-center gap-2 flex-initial">
               <label className="text-xs text-gray-600 whitespace-nowrap">調査目的</label>
               <select
                 value={purpose}
                 onChange={(e) => setPurpose(e.target.value)}
-                className="w-full rounded border border-gray-300 py-2 text-xs"
+                className="w-30 flex-1 rounded-sm border border-gray-300 py-2 text-xs"
               >
                 {purposeOptions.map((o) => (
                   <option key={o.value + o.label} value={o.value}>
@@ -223,13 +222,12 @@ export default function SessionList() {
                 ))}
               </select>
             </div>
-
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-initial">
               <label className="text-xs text-gray-600 whitespace-nowrap">ステータス</label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="w-full rounded border border-gray-300 py-2 text-xs"
+                className="w-30 rounded-sm border border-gray-300 py-2 text-xs"
               >
                 {statusOptions.map((o) => (
                   <option key={o.value + o.label} value={o.value}>
@@ -238,22 +236,20 @@ export default function SessionList() {
                 ))}
               </select>
             </div>
-
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-1">
               <label className="text-xs text-gray-600 whitespace-nowrap">
                 事業所名
               </label>
               <input
                 value={facilityQuery}
                 onChange={(e) => setFacilityQuery(e.target.value)}
-                className="w-full rounded border border-gray-300 px-3 py-2 text-xs focus:ring-blue-500 focus:border-blue-500"
+                className="w-full rounded-sm border border-gray-300 px-3 py-2 text-xs focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
-
-            <div className="flex md:justify-end">
+            <div className="flex md:justify-end md:w-25">
               <button
                 onClick={handleSearch}
-                className="px-3 py-2 rounded bg-blue-600 text-white text-xs hover:bg-blue-700 w-full md:w-auto"
+                className="w-full md:w-auto px-3 py-2 rounded-sm bg-blue-600 text-white text-xs hover:bg-blue-700"
               >
                 検索
               </button>
@@ -263,27 +259,27 @@ export default function SessionList() {
 
         {/* Loading */}
         {loading && (
-          <div className="p-6 animate-pulse space-y-4 rounded-md bg-white border shadow-sm mt-4">
-            <div className="h-6 w-48 bg-gray-200 rounded" />
-            <div className="h-4 w-full bg-gray-200 rounded" />
-            <div className="h-4 w-5/6 bg-gray-200 rounded" />
+          <div className="p-6 animate-pulse space-y-4 rounded-sm bg-white border border-gray-200 shadow-xs mt-4">
+            <div className="h-6 w-48 bg-gray-200 rounded-sm" />
+            <div className="h-4 w-full bg-gray-200 rounded-sm" />
+            <div className="h-4 w-5/6 bg-gray-200 rounded-sm" />
           </div>
         )}
 
         {/* Error */}
         {!loading && err && (
-          <div className="mt-4 rounded-md border border-red-200 bg-red-50 text-red-700 px-3 py-2 text-xs">
+          <div className="mt-4 rounded-sm border border-red-200 bg-red-50 text-red-700 px-3 py-2 text-xs">
             読み込みエラー: {err}
           </div>
         )}
 
         {/* Table */}
         {!loading && !err && (
-          <div className="mt-4 overflow-hidden rounded-md border border-gray-200 bg-white shadow-sm">
+          <div className="mt-4 overflow-hidden rounded-sm border border-gray-200 bg-white shadow-xs">
             <div className="overflow-x-auto">
               <table className="table-auto w-full text-xs">
-                <thead className="bg-gray-50 text-gray-600">
-                  <tr className="[&>th]:px-3 [&>th]:py-2 [&>th]:text-left">
+                <thead className="border-b border-gray-100 bg-gray-50 text-gray-600">
+                  <tr className="[&>th]:px-3 [&>th]:py-3 [&>th]:text-left">
                     <th className="w-12">ID</th>
                     <th className="w-2/5">事業所名</th>
                     <th className="w-28">調査目的</th>
@@ -326,14 +322,14 @@ export default function SessionList() {
                         <div className="flex gap-2">
                           <button
                             onClick={() => nav(`/session/${r.id}/status`)}
-                            className="px-2 py-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700"
+                            className="px-2 py-1 rounded-sm bg-blue-600 text-white text-xs hover:bg-blue-700"
                           >
                             詳細
                           </button>
                           <button
                             onClick={() => nav(`/session/${r.id}/confirmation-summary`)}
                             disabled={!r.hasClientConfirmation}
-                            className={`px-2 py-1 rounded text-xs ${
+                            className={`px-2 py-1 rounded-sm text-xs ${
                               r.hasClientConfirmation
                                 ? "bg-emerald-600 text-white hover:bg-emerald-700"
                                 : "bg-gray-200 text-gray-500 cursor-not-allowed"
@@ -351,11 +347,11 @@ export default function SessionList() {
 
             {/* Pagination */}
             {total > 0 && (
-              <div className="flex items-center justify-between px-4 py-3 border-t">
+              <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
                 <div className="text-xs text-gray-600">
                   {`${startIndex}–${endIndex} / ${total}`}
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4">
                   <div className="flex items-center gap-1">
                     <label className="text-xs text-gray-600 whitespace-nowrap">
                       件表示
@@ -368,7 +364,7 @@ export default function SessionList() {
                         setPage(1); // reset to first page
                         setPageSize(newSize);
                       }}
-                      className="border border-gray-300 rounded text-xs px-1.5 py-1 focus:ring-blue-500 focus:border-blue-500"
+                      className="border border-gray-300 rounded-sm text-xs px-1 py-1 focus:ring-blue-500 focus:border-blue-500"
                     >
                       {[10, 25, 50, 100].map((size) => (
                         <option key={size} value={size}>
@@ -381,7 +377,7 @@ export default function SessionList() {
                     <button
                       onClick={() => setPage((p) => Math.max(1, p - 1))}
                       disabled={page === 1}
-                      className="px-2 py-1 text-xs border rounded disabled:opacity-50 flex items-center"
+                      className="px-2 py-1 text-xs border border-gray-300 rounded-sm disabled:opacity-50 flex items-center"
                     >
                       <ChevronLeftIcon className="w-3 h-4 text-gray-600" />
                     </button>
@@ -391,9 +387,9 @@ export default function SessionList() {
                     <button
                       onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
                       disabled={page === pageCount}
-                      className="px-2 py-1 text-xs border rounded disabled:opacity-50 flex items-center"
+                      className="px-2 py-1 text-xs border border-gray-300 rounded-sm disabled:opacity-50 flex items-center"
                     >
-                      <ChevronRightIcon className="w-3 h-3 text-gray-600" />
+                      <ChevronRightIcon className="w-3 h-4 text-gray-600" />
                     </button>
                   </div>
                 </div>

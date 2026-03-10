@@ -3,11 +3,11 @@ import json, urllib.request, os, socket, re
 from urllib.error import URLError
 from app.services.notion.facility_info_service import fetch_facility_info
 
-_webhook_url = os.environ.get("MAKE_GENERATE_FACILITY_EMAIL")
+_webhook_url = os.getenv("MAKE_GENERATE_FACILITY_EMAIL")
 if not _webhook_url:
     raise RuntimeError("MAKE_GENERATE_FACILITY_EMAIL is not set")
 
-_default_timeout = int(os.environ.get("MAKE_HTTP_TIMEOUT_SECONDS", "120"))
+_default_timeout = int(os.getenv("MAKE_HTTP_TIMEOUT_SECONDS", "120"))
 
 _EMAIL_RE = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}", re.IGNORECASE)
 

@@ -9,7 +9,7 @@ PROP_CONTACT = "担当者名"
 PROP_CONTACT_MAIL = "Mail"
 
 # Notion client
-_token = os.environ.get("NOTION_API_TOKEN")
+_token = os.getenv("NOTION_API_TOKEN")
 if not _token:
     raise RuntimeError("NOTION_API_TOKEN is not set")
 _notion = Client(auth=_token)

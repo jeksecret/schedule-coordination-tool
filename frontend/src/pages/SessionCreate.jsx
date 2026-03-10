@@ -174,9 +174,9 @@ export default function SessionCreate() {
   return (
     <div className="min-h-screen bg-gray-200">
       {saving && (
-        <div className="fixed inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="p-4 rounded-xl border bg-white shadow">
-            <div className="animate-spin w-5 h-5 border-2 border-blue-200 border-t-blue-600 rounded-full mx-auto mb-3"></div>
+        <div className="fixed inset-0 bg-white/60 backdrop-blur-sm flex items-start justify-center z-50">
+          <div className="p-4 rounded-sm border border-gray-200 bg-white shadow-xs">
+            <div className="animate-spin w-5 h-5 border-2 border-blue-200 border-t-blue-600 rounded-sm mx-auto mb-3"></div>
             <div className="text-xs">保存中…</div>
           </div>
         </div>
@@ -184,10 +184,10 @@ export default function SessionCreate() {
 
       {/* Top Navigation */}
       <nav className="bg-blue-500 text-white shadow">
-        <div className="max-w-full mx-auto px-4 py-3 flex justify-end items-center">
+        <div className="max-w-full mx-auto px-4 py-3 flex justify-end items-start">
           <button
             onClick={handleLogout}
-            className="text-xs border border-white bg-transparent text-white font-light px-4 py-2 rounded hover:bg-white hover:text-blue-600"
+            className="text-xs border border-white bg-transparent text-white font-light px-4 py-2 rounded-sm hover:bg-white hover:text-blue-600"
           >
             ログアウト
           </button>
@@ -200,7 +200,7 @@ export default function SessionCreate() {
           <button
             type="button"
             onClick={handleBack}
-            className="flex items-center px-3 py-2 gap-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700"
+            className="flex items-start px-3 py-2 gap-1 rounded-sm bg-blue-600 text-white text-xs hover:bg-blue-700"
           >
             一覧へ戻る
           </button>
@@ -208,22 +208,21 @@ export default function SessionCreate() {
 
         {/* Loading (Notion fetch) */}
         {loadingFetch && (
-          <div className="p-6 animate-pulse space-y-4 rounded-md bg-white border shadow-sm mb-4">
-            <div className="h-6 w-48 bg-gray-200 rounded" />
-            <div className="h-4 w-full bg-gray-200 rounded" />
-            <div className="h-4 w-5/6 bg-gray-200 rounded" />
+          <div className="p-6 animate-pulse space-y-4 rounded-sm bg-white border border-gray-200 shadow-xs mb-4">
+            <div className="h-6 w-48 bg-gray-200 rounded-sm" />
+            <div className="h-4 w-full bg-gray-200 rounded-sm" />
+            <div className="h-4 w-5/6 bg-gray-200 rounded-sm" />
           </div>
         )}
 
-        <div className="bg-white border rounded-lg p-4 space-y-4 shadow-sm">
+        <div className="bg-white border border-gray-200 rounded-sm p-4 space-y-4 shadow-xs">
           <h1 className="text-base font-medium text-gray-700">日程調整作成</h1>
           <hr className="my-3 border-gray-200" />
-
           {/* Notion URL */}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 py-2">
             <div className="text-xs text-gray-700">Notion URL</div>
             <input
-              className="flex-1 rounded border border-gray-300 px-3 py-2 text-xs"
+              className="flex-1 rounded-sm border border-gray-300 px-2 py-2 text-xs"
               placeholder="https://www.notion.so/..."
               value={notionUrl}
               onChange={(e) => {
@@ -238,26 +237,24 @@ export default function SessionCreate() {
               type="button"
               onClick={handleFetchInfo}
               disabled={loadingFetch || !notionUrl}
-              className="px-3 py-2 rounded bg-blue-600 text-white text-xs hover:bg-blue-700 disabled:opacity-60"
+              className="px-3 py-2 rounded-sm bg-blue-600 text-white text-xs hover:bg-blue-700 disabled:opacity-60"
             >
               {loadingFetch ? "取得中…" : "情報取得"}
             </button>
-
             {fetchErr && (
               <div className="w-full text-xs text-red-600 mt-1">{fetchErr}</div>
             )}
           </div>
-
           {/* 事業所情報（表示のみ） */}
-          <div className="border rounded">
-            <dl className="divide-y">
-              <div className="flex items-center px-3 py-2">
+          <div className="border border-gray-200 rounded-sm">
+            <dl className="divide-y divide-gray-200">
+              <div className="flex items-start px-3 py-2">
                 <dt className="w-36 text-xs text-gray-600">事業所名</dt>
                 <dd className="flex-1 text-xs">
                   {facilityName ? <span className="text-gray-900">{facilityName}</span> : <span className="text-gray-400">－</span>}
                 </dd>
               </div>
-              <div className="flex items-center px-3 py-2">
+              <div className="flex items-start px-3 py-2">
                 <dt className="w-36 text-xs text-gray-600">事業所担当者</dt>
                 <dd className="flex-1 text-xs">
                   {contact?.name || contact?.email ? (
@@ -271,12 +268,12 @@ export default function SessionCreate() {
                 </dd>
               </div>
               <div className="flex items-start px-3 py-2">
-                <dt className="w-36 text-xs text-gray-600 leading-7">評価者</dt>
+                <dt className="w-36 text-xs text-gray-600">評価者</dt>
                 <dd className="flex-1 text-xs">
                   {evaluators?.length ? (
                     <ul className="space-y-1">
                       {evaluators.map((e, i) => (
-                        <li key={i} className="leading-6">
+                        <li key={i}>
                           {e.name}{e.email ? `（${e.email}）` : ""}
                         </li>
                       ))}
@@ -288,13 +285,12 @@ export default function SessionCreate() {
               </div>
             </dl>
           </div>
-
           {/* 調整情報入力 */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <div className="w-36 text-xs text-gray-600">調査目的</div>
+          <div className="space-y-2">
+            <div className="flex items-start gap-3">
+              <div className="w-36 text-xs text-gray-600 px-3 py-1.5">調査目的</div>
               <select
-                className="w-36 rounded py-1 text-xs"
+                className="w-36 rounded-sm px-1 py-1.5 text-xs"
                 value={purpose}
                 onChange={(e) => {
                   setInlineErr("");
@@ -306,13 +302,12 @@ export default function SessionCreate() {
                 ))}
               </select>
             </div>
-
             <div className="flex items-start gap-3">
-              <div className="w-36 text-xs text-gray-600 mt-2">評価者回答期限</div>
+              <div className="w-36 text-xs text-gray-600 px-3 py-1.5">評価者回答期限</div>
               <div className="flex-1">
                 <input
                   type="date"
-                  className="w-36 rounded border-gray-300 py-1 text-xs"
+                  className="w-36 rounded-sm px-1 py-1.5 text-xs"
                   value={responseDeadline}
                   onChange={(e) => {
                     setInlineErr("");
@@ -325,13 +320,12 @@ export default function SessionCreate() {
                 )}
               </div>
             </div>
-
             <div className="flex items-start gap-3">
-              <div className="w-36 text-xs text-gray-600 mt-2">事業所提示期限</div>
+              <div className="w-36 text-xs text-gray-600 px-3 py-1.5">事業所提示期限</div>
               <div className="flex-1">
                 <input
                   type="date"
-                  className="w-36 rounded border-gray-300 py-1 text-xs"
+                  className="w-36 rounded-sm px-1 py-1.5 text-xs"
                   value={presentationDate}
                   onChange={(e) => {
                     setInlineErr("");
@@ -345,24 +339,23 @@ export default function SessionCreate() {
               </div>
             </div>
           </div>
-
-          <div className="border rounded">
+          <div className="border border-gray-200 rounded-sm">
             <div className="flex items-start">
-              <div className="w-36 text-xs text-gray-600 px-3 py-2">候補日程</div>
+              <div className="w-36 text-xs text-gray-600 px-3 py-3.5">候補日程</div>
               <div className="flex-1 px-3 py-2 space-y-2">
                 {slots.map((row, i) => (
                   <div key={i} className="flex flex-col gap-1">
                     <div className="flex items-center gap-2">
                       <input
                         type="date"
-                        className="w-36 rounded border-gray-300 py-1 text-xs"
+                        className="w-36 rounded-sm px-1 py-1.5 text-xs"
                         value={row.date}
                         onChange={(e) => setSlotDate(i, e.target.value)}
                         min={MIN_DATE}
                       />
                       <input
                         type="text"
-                        className="flex-1 rounded border border-gray-300 text-xs px-2 py-2"
+                        className="flex-1 border border-gray-300 rounded-sm text-xs px-2 py-2"
                         value={row.label}
                         onChange={(e) => setSlotLabel(i, e.target.value)}
                       />
@@ -370,7 +363,7 @@ export default function SessionCreate() {
                         <button
                           type="button"
                           onClick={() => removeSlot(i)}
-                          className="px-2 py-1 rounded border text-xs bg-red-600 hover:bg-red-700 text-white flex items-center gap-1"
+                          className="px-2 py-1 rounded-sm border text-xs bg-red-600 hover:bg-red-700 text-white flex items-start gap-1"
                         >
                           削除
                         </button>
@@ -384,24 +377,22 @@ export default function SessionCreate() {
                 <button
                   type="button"
                   onClick={addSlotRow}
-                  className="mt-1 px-2 py-1 rounded border text-xs bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1"
+                  className="px-2 py-1 rounded-sm border text-xs bg-blue-600 hover:bg-blue-700 text-white flex items-start gap-1"
                 >
                   追加
                 </button>
               </div>
             </div>
           </div>
-
           {inlineErr ? (
             <div className="text-xs text-red-600 text-center">{inlineErr}</div>
           ) : null}
-
-          <div className="pt-2 flex justify-center">
+          <div className="mt-2 flex justify-start">
             <button
               type="button"
               onClick={handleCreate}
               disabled={!canSubmit}
-              className="w-full md:w-auto px-3 py-2 rounded bg-blue-600 text-white text-xs hover:bg-blue-700 disabled:opacity-60"
+              className="w-full md:w-auto px-3 py-2 rounded-sm bg-blue-600 text-white text-xs hover:bg-blue-700 disabled:opacity-60"
             >
               {saving ? "保存中…" : "保存して文面作成"}
             </button>

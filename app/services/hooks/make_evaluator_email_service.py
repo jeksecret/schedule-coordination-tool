@@ -8,8 +8,8 @@ import secrets
 import re
 from app.services.notion.facility_info_service import fetch_facility_info
 
-_default_timeout = int(os.environ.get("MAKE_HTTP_TIMEOUT_SECONDS", "120"))
-_webhook_url = os.environ.get("MAKE_GENERATE_EVALUATOR_EMAIL")
+_default_timeout = int(os.getenv("MAKE_HTTP_TIMEOUT_SECONDS", "120"))
+_webhook_url = os.getenv("MAKE_GENERATE_EVALUATOR_EMAIL")
 if not _webhook_url:
     raise RuntimeError("MAKE_GENERATE_EVALUATOR_EMAIL is not set")
 

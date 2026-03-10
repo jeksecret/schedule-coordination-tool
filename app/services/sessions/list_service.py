@@ -41,18 +41,15 @@ def fetch_session_list(
         .table("session_list_v")
         .select(
             "id, facility_name, purpose, status, confirmed_date, notion_url, updated_at, "
-            "total_evaluators, answered",
-            count="exact",
+            "total_evaluators, answered"
         )
         .order("id", desc=True)
     )
 
     if purpose:
         q = q.eq("purpose", purpose)
-
     if status:
         q = q.eq("status", status)
-
     if facility:
         norm = normalize_text_for_search(facility.strip())
         q = q.ilike("facility_name_norm", f"%{norm}%")
@@ -60,10 +57,26 @@ def fetch_session_list(
     # DB-side pagination
     q = q.range(limit_start, limit_end)
 
-    res = q.execute()
+    data_res = q.execute()
+    items = data_res.data or []
 
-    items = res.data or []
-    total = res.count or 0
+    # Count query
+    count_q = (
+        supabase
+        .table("session_list_v")
+        .select("id", count="exact", head=True)
+    )
+
+    if purpose:
+        count_q = count_q.eq("purpose", purpose)
+    if status:
+        count_q = count_q.eq("status", status)
+    if facility:
+        norm = normalize_text_for_search(facility.strip())
+        count_q = count_q.ilike("facility_name_norm", f"%{norm}%")
+
+    count_res = count_q.execute()
+    total = count_res.count or 0
 
     return {
         "items": items,

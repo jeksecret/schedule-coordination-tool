@@ -264,27 +264,27 @@ export default function SessionStatus() {
   const handleBack = () => nav("/session/list");
 
   const selectClass = (disabled) =>
-    `w-36 py-1 rounded border-gray-300 text-xs text-center ${
+    `w-36 py-1.5 border border-gray-300 rounded-sm text-xs text-center ${
       disabled ? "bg-gray-100 text-gray-500 cursor-not-allowed" : ""
     }`;
 
   return (
     <div className="min-h-screen bg-gray-200">
       {makingDraft && (
-        <div className="fixed inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="p-4 rounded-xl border bg-white shadow">
-            <div className="animate-spin w-5 h-5 border-2 border-blue-200 border-t-blue-600 rounded-full mx-auto mb-3"></div>
+        <div className="fixed inset-0 bg-white/60 backdrop-blur-sm flex items-start justify-center z-50">
+          <div className="p-4 rounded-sm border border-gray-200 bg-white shadow-xs">
+            <div className="animate-spin w-5 h-5 border-2 border-blue-200 border-t-blue-600 rounded-sm mx-auto mb-3"></div>
             <div className="text-xs">事業所向けメールの下書きを作成中…</div>
           </div>
         </div>
       )}
 
       {/* Top Navigation */}
-      <nav className="bg-blue-500 text-white shadow">
-        <div className="max-w-full mx-auto px-4 py-3 flex justify-end items-center">
+      <nav className="bg-blue-500 text-white shadow-xs">
+        <div className="max-w-full mx-auto px-4 py-3 flex justify-end items-start">
           <button
             onClick={handleLogout}
-            className="text-xs border border-white bg-transparent text-white font-light px-4 py-2 rounded hover:bg-white hover:text-blue-600"
+            className="text-xs border border-white bg-transparent text-white font-light px-4 py-2 rounded-sm hover:bg-white hover:text-blue-600"
           >
             ログアウト
           </button>
@@ -297,7 +297,7 @@ export default function SessionStatus() {
           <button
             type="button"
             onClick={handleBack}
-            className="flex items-center px-3 py-2 gap-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700"
+            className="flex items-start px-3 py-2 gap-1 rounded-sm bg-blue-600 text-white text-xs hover:bg-blue-700"
           >
             一覧へ戻る
           </button>
@@ -305,16 +305,16 @@ export default function SessionStatus() {
 
         {/* Loading */}
         {loading && (
-          <div className="p-6 animate-pulse space-y-4 rounded-md bg-white border shadow-sm">
-            <div className="h-6 w-48 bg-gray-200 rounded" />
-            <div className="h-4 w-full bg-gray-200 rounded" />
-            <div className="h-4 w-5/6 bg-gray-200 rounded" />
+          <div className="p-6 animate-pulse space-y-4 rounded-sm bg-white border border-gray-200 shadow-xs">
+            <div className="h-6 w-48 bg-gray-200 rounded-sm" />
+            <div className="h-4 w-full bg-gray-200 rounded-sm" />
+            <div className="h-4 w-5/6 bg-gray-200 rounded-sm" />
           </div>
         )}
 
         {/* Error */}
         {!loading && pageErr && (
-          <div className="p-6 rounded-md bg-white border shadow-sm">
+          <div className="p-6 rounded-sm bg-white border border-red-200 shadow-sm">
             <div className="text-red-600 text-xs">{pageErr}</div>
           </div>
         )}
@@ -323,12 +323,12 @@ export default function SessionStatus() {
         {!loading && !pageErr && data && (
           <>
             {/* 基本情報 */}
-            <div className="bg-white border rounded shadow-sm p-4">
+            <div className="bg-white border border-gray-200 rounded-sm shadow-xs p-4">
               <h1 className="text-base font-medium text-gray-700">基本情報</h1>
               <hr className="my-3 border-gray-200" />
-              <dl className="divide-y">
+              <dl className="divide-y divide-gray-200">
                 {/* 事業所名 */}
-                <div className="flex items-center py-2">
+                <div className="flex items-start py-2">
                   <dt className="w-36 text-xs text-gray-600">事業所名</dt>
                   <dd className="flex-1 text-xs">
                     {data.session?.facility?.notion_url ? (
@@ -345,9 +345,8 @@ export default function SessionStatus() {
                     )}
                   </dd>
                 </div>
-
                 {/* 事業所担当者 */}
-                <div className="flex items-center py-2">
+                <div className="flex items-start py-2">
                   <dt className="w-36 text-xs text-gray-600">事業所担当者</dt>
                   <dd className="flex-1 text-xs">
                     {data.session.facility.contact_name || data.session.facility.contact_email ? (
@@ -361,9 +360,8 @@ export default function SessionStatus() {
                     )}
                   </dd>
                 </div>
-
                 {/* 事業所フォーム */}
-                <div className="flex items-center py-2">
+                <div className="flex items-start py-2">
                   <dt className="w-36 text-xs text-gray-600">事業所フォーム</dt>
                   <dd className="flex-1 text-xs">
                     {data.session?.facility_form_edit_url || data.session?.facility_form_view_url ? (
@@ -399,16 +397,15 @@ export default function SessionStatus() {
                     )}
                   </dd>
                 </div>
-
                 {/* 評価者 */}
                 <div className="flex items-start py-2">
-                  <dt className="w-36 text-xs text-gray-600 leading-7">評価者</dt>
+                  <dt className="w-36 text-xs text-gray-600">評価者</dt>
                   <dd className="flex-1 text-xs">
                     {Array.isArray(data.evaluators) && data.evaluators.length ? (
                       <ul className="space-y-1">
                         {data.evaluators.map((e, index) => (
-                          <li key={e.id ?? `evaluator-${index}`} className="leading-6">
-                            <div className="flex flex-wrap items-center gap-2">
+                          <li key={e.id ?? `evaluator-${index}`}>
+                            <div className="flex flex-wrap items-start gap-2">
                               <span>
                                 {e.name}
                                 {e.email ? `（${e.email}）` : ""}ー
@@ -449,13 +446,12 @@ export default function SessionStatus() {
                     )}
                   </dd>
                 </div>
-
                 {/* 調査目的（編集） */}
-                <div className="flex items-center py-2">
-                  <dt className="w-36 text-xs text-gray-600">調査目的</dt>
+                <div className="flex items-start py-1">
+                  <dt className="w-36 text-xs text-gray-600 py-1.5">調査目的</dt>
                   <dd className="flex-1">
                     <select
-                      className="w-36 rounded border-gray-300 py-1 text-xs"
+                      className="w-36 rounded-sm px-1 py-1.5 text-xs"
                       value={purpose}
                       onChange={(e) => setPurpose(e.target.value)}
                     >
@@ -467,14 +463,13 @@ export default function SessionStatus() {
                     </select>
                   </dd>
                 </div>
-
                 {/* 評価者回答期限（編集・インラインエラー） */}
-                <div className="flex items-start py-2">
-                  <dt className="w-36 text-xs text-gray-600 mt-2">評価者回答期限</dt>
+                <div className="flex items-start py-1">
+                  <dt className="w-36 text-xs text-gray-600 py-1.5">評価者回答期限</dt>
                   <dd className="flex-1">
                     <input
                       type="date"
-                      className="w-36 rounded border-gray-300 py-1 text-xs"
+                      className="w-36 rounded-sm px-1 py-1.5 text-xs"
                       value={responseDeadline || ""}
                       onChange={(e) => setResponseDeadline(e.target.value)}
                     />
@@ -485,12 +480,12 @@ export default function SessionStatus() {
                 </div>
 
                 {/* 事業所提示期限（編集・インラインエラー） */}
-                <div className="flex items-start py-2">
-                  <dt className="w-36 text-xs text-gray-600 mt-2">事業所提示期限</dt>
+                <div className="flex items-start py-1">
+                  <dt className="w-36 text-xs text-gray-600 py-1.5">事業所提示期限</dt>
                   <dd className="flex-1">
                     <input
                       type="date"
-                      className="w-36 rounded border-gray-300 py-1 text-xs"
+                      className="w-36 rounded-sm px-1 py-1.5 text-xs"
                       value={presentationDate || ""}
                       onChange={(e) => setPresentationDate(e.target.value)}
                     />
@@ -507,7 +502,7 @@ export default function SessionStatus() {
                   type="button"
                   onClick={handleUpdateSession}
                   disabled={saving}
-                  className={`px-3 py-2 rounded text-xs text-white ${
+                  className={`px-3 py-2 rounded-sm text-xs text-white ${
                     saving
                       ? "bg-blue-300 cursor-not-allowed"
                       : "bg-blue-600 hover:bg-blue-700"
@@ -519,7 +514,7 @@ export default function SessionStatus() {
             </div>
 
             {/* 日程調整状況 */}
-            <div className="bg-white border rounded shadow-sm p-4 mt-6">
+            <div className="bg-white border border-gray-200 rounded-sm shadow-xs p-4 mt-6">
               <h2 className="text-base font-medium text-gray-700">日程調整状況</h2>
               <hr className="my-3 border-gray-200" />
               <div className="overflow-x-auto">
@@ -538,7 +533,7 @@ export default function SessionStatus() {
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y">
+                  <tbody className="divide-y divide-gray-200">
                     {data.slots.map((slot) => {
                       const rowLocked = !!proposed[slot.id];
                       return (
@@ -590,8 +585,8 @@ export default function SessionStatus() {
                       {data.evaluators.map((e) => (
                         <td key={`note_${e.id}`} className="text-center">
                           <textarea
-                            rows={4}
-                            className="w-48 rounded border border-gray-300 text-xs px-2 py-1"
+                            rows={5}
+                            className="w-48 rounded-sm border border-gray-300 text-xs px-1 py-1"
                             value={notes[e.id] ?? ""}
                             onChange={(ev) =>
                               setNotes((m) => ({ ...m, [e.id]: ev.target.value }))
@@ -611,7 +606,7 @@ export default function SessionStatus() {
                             type="button"
                             onClick={() => handleUpdateEvaluatorResponse(e.id)}
                             disabled={saving}
-                            className={`px-3 py-2 text-white text-xs rounded ${
+                            className={`px-3 py-2 text-white text-xs rounded-sm ${
                               saving
                                 ? "bg-blue-300 cursor-not-allowed"
                                 : "bg-blue-600 hover:bg-blue-700"
@@ -630,12 +625,12 @@ export default function SessionStatus() {
                 <div className="text-xs text-red-600">{inlineErr}</div>
               ) : null}
 
-              <div className="mt-4 flex justify-start">
+              <div className="mt-2 flex justify-start">
                 <button
                   type="button"
                   onClick={handleMakeFacilityEmailDraft}
                   disabled={makingDraft || !hasProposedSelected}
-                  className={`px-4 py-2 text-white text-xs rounded ${
+                  className={`px-4 py-2 text-white text-xs rounded-sm ${
                     makingDraft || !hasProposedSelected
                       ? "bg-blue-300 cursor-not-allowed"
                       : "bg-blue-600 hover:bg-blue-700"

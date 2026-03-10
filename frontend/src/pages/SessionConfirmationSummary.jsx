@@ -64,11 +64,11 @@ export default function InternalSessionSummary() {
   return (
     <div className="min-h-screen bg-gray-200">
       {/* Top Navigation */}
-      <nav className="bg-blue-500 text-white shadow">
-        <div className="max-w-full mx-auto px-4 py-3 flex justify-end items-center">
+      <nav className="bg-blue-500 text-white shadow-sm">
+        <div className="max-w-full mx-auto px-4 py-3 flex justify-end items-start">
           <button
             onClick={handleLogout}
-            className="text-xs border border-white bg-transparent text-white font-light px-4 py-2 rounded hover:bg-white hover:text-blue-600"
+            className="text-xs border border-white bg-transparent text-white font-light px-4 py-2 rounded-sm hover:bg-white hover:text-blue-600"
           >
             ログアウト
           </button>
@@ -81,7 +81,7 @@ export default function InternalSessionSummary() {
           <button
             type="button"
             onClick={handleBack}
-            className="flex items-center px-3 py-2 gap-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700"
+            className="flex items-start px-3 py-2 gap-1 rounded-sm bg-blue-600 text-white text-xs hover:bg-blue-700"
           >
             一覧へ戻る
           </button>
@@ -89,16 +89,16 @@ export default function InternalSessionSummary() {
 
         {/* Loading */}
         {loading && (
-          <div className="p-6 animate-pulse space-y-4 rounded-md bg-white border shadow-sm">
-            <div className="h-6 w-48 bg-gray-200 rounded" />
-            <div className="h-4 w-full bg-gray-200 rounded" />
-            <div className="h-4 w-5/6 bg-gray-200 rounded" />
+          <div className="p-6 animate-pulse space-y-4 rounded-sm bg-white border border-gray-200 shadow-sm">
+            <div className="h-6 w-48 bg-gray-200 rounded-sm" />
+            <div className="h-4 w-full bg-gray-200 rounded-sm" />
+            <div className="h-4 w-5/6 bg-gray-200 rounded-sm" />
           </div>
         )}
 
         {/* Error */}
         {!loading && err && (
-          <div className="p-6 rounded-md bg-white border shadow-sm">
+          <div className="p-6 rounded-sm bg-white border border-red-200 shadow-sm">
             <div className="text-red-600 text-xs">{err}</div>
           </div>
         )}
@@ -107,12 +107,12 @@ export default function InternalSessionSummary() {
         {!loading && !err && row && (
           <div className="space-y-6">
             {/* 基本情報 */}
-            <div className="bg-white border rounded shadow-sm p-4">
+            <div className="bg-white border border-gray-200 rounded-sm shadow-sm p-4">
               <h2 className="text-base font-medium text-gray-700">基本情報</h2>
               <hr className="my-3 border-gray-200" />
-              <dl className="divide-y">
+              <dl className="divide-y divide-gray-200">
                 {/* 事業所名 */}
-                <div className="flex items-center py-2">
+                <div className="flex items-start py-2">
                   <dt className="w-36 text-xs text-gray-600">事業所名</dt>
                   <dd className="flex-1 text-xs">
                     {row.facility_notion_url ? (
@@ -131,7 +131,7 @@ export default function InternalSessionSummary() {
                 </div>
 
                 {/* 事業所担当者 */}
-                <div className="flex items-center py-2">
+                <div className="flex items-start py-2">
                   <dt className="w-36 text-xs text-gray-600">事業所担当者</dt>
                   <dd className="flex-1 text-xs">
                     {row.facility_contact_name || contactEmails.length ? (
@@ -148,7 +148,7 @@ export default function InternalSessionSummary() {
                 </div>
 
                 {/* 調査目的 */}
-                <div className="flex items-center py-2">
+                <div className="flex items-start py-2">
                   <dt className="w-36 text-xs text-gray-600">調査目的</dt>
                   <dd className="flex-1 text-xs">
                     {row.purpose || <span className="text-gray-400">-</span>}
@@ -156,7 +156,7 @@ export default function InternalSessionSummary() {
                 </div>
 
                 {/* ステータス */}
-                <div className="flex items-center py-2">
+                <div className="flex items-start py-2">
                   <dt className="w-36 text-xs text-gray-600">ステータス</dt>
                   <dd className="flex-1 text-xs">
                     {row.status || <span className="text-gray-400">-</span>}
@@ -166,19 +166,19 @@ export default function InternalSessionSummary() {
             </div>
 
             {/* 事業所回答 */}
-            <div className="bg-white border rounded shadow-sm p-4">
+            <div className="bg-white border border-gray-200 rounded-sm shadow-sm p-4">
               <h2 className="text-base font-medium text-gray-700">事業所回答</h2>
               <hr className="my-3 border-gray-200" />
-              <dl className="divide-y">
-                <div className="flex items-center py-2">
+              <dl className="divide-y divide-gray-200">
+                <div className="flex items-start py-2">
                   <dt className="w-36 text-xs text-gray-600">回答日</dt>
                   <dd className="flex-1 text-xs">{formatDateYMD(row.client_answered_at)}</dd>
                 </div>
-                <div className="flex items-center py-2">
-                  <dt className="w-36 text-xs text-gray-600 leading-7">希望日程</dt>
+                <div className="flex items-start py-2">
+                  <dt className="w-36 text-xs text-gray-600">希望日程</dt>
                   <dd className="flex-1 text-xs">
                     {row.preferred_slot_id ? (
-                      <div className="flex flex-wrap items-center gap-x-1 gap-y-1">
+                      <div className="flex flex-wrap items-start gap-x-1 gap-y-1">
                         <span className="text-gray-900">{formatDateYMD(row.preferred_slot_date)}</span>
                         <span className="text-gray-900">{row.preferred_slot_label || "—"}</span>
                       </div>
@@ -187,8 +187,8 @@ export default function InternalSessionSummary() {
                     )}
                   </dd>
                 </div>
-                <div className="flex items-center py-2">
-                  <dt className="w-36 text-xs text-gray-600 leading-7">備考</dt>
+                <div className="flex items-start py-2">
+                  <dt className="w-36 text-xs text-gray-600">備考</dt>
                   <dd className="flex-1 text-xs whitespace-pre-wrap">
                     {row.client_note || <span className="text-gray-400">－</span>}
                   </dd>
@@ -197,28 +197,28 @@ export default function InternalSessionSummary() {
             </div>
 
             {/* 評価者 */}
-            <div className="bg-white border rounded shadow-sm p-4">
+            <div className="bg-white border border-gray-200 rounded-sm shadow-sm p-4">
               <h2 className="text-base font-medium text-gray-700">評価者</h2>
               <hr className="my-3 border-gray-200" />
               <div className="overflow-x-auto">
-                <table className="min-w-full text-xs">
+                <table className="min-w-full text-left text-xs">
                   <thead>
-                    <tr className="text-left text-gray-500">
-                      <th className="py-2 pr-4">氏名</th>
-                      <th className="py-2 pr-4">メールアドレス</th>
+                    <tr className="text-gray-500">
+                      <th className="py-2">氏名</th>
+                      <th className="py-2">メールアドレス</th>
                     </tr>
                   </thead>
                   <tbody>
                     {Array.isArray(evaluators) && evaluators.length > 0 ? (
                       evaluators.map((ev) => (
-                        <tr key={ev.id} className="border-t">
-                          <td className="py-2 pr-4">{ev.name}</td>
-                          <td className="py-2 pr-4">{ev.email}</td>
+                        <tr key={ev.id} className="border-t border-gray-200">
+                          <td className="py-2">{ev.name}</td>
+                          <td className="py-2">{ev.email}</td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan="2" className="py-3 text-gray-500">
+                        <td colSpan="2" className="py-2 text-gray-500">
                           評価者がいません
                         </td>
                       </tr>

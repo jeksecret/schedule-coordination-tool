@@ -7,10 +7,10 @@ load_dotenv()
 
 @lru_cache(maxsize=1)
 def get_supabase() -> Client:
-    url = os.environ.get("SUPABASE_URL")
-    key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_ANON_KEY")
+    url = os.getenv("SUPABASE_URL")
+    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
     if url is None:
         raise RuntimeError("Environment variable SUPABASE_URL is not set.")
     if key is None:
-        raise RuntimeError("Neither SUPABASE_SERVICE_ROLE_KEY nor SUPABASE_ANON_KEY is set.")
+        raise RuntimeError("Environment variable SUPABASE_SERVICE_ROLE_KEY is not set.")
     return create_client(url, key)

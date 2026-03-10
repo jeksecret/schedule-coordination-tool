@@ -7,8 +7,8 @@ import socket
 import re
 from app.services.notion.facility_info_service import fetch_facility_info
 
-_default_timeout = int(os.environ.get("MAKE_HTTP_TIMEOUT_SECONDS", "120"))
-_webhook_url = os.environ.get("MAKE_ON_CLIENT_RESPONSE")
+_default_timeout = int(os.getenv("MAKE_HTTP_TIMEOUT_SECONDS", "120"))
+_webhook_url = os.getenv("MAKE_ON_CLIENT_RESPONSE")
 if not _webhook_url:
     raise RuntimeError("MAKE_ON_CLIENT_RESPONSE is not set")
 
